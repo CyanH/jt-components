@@ -1,0 +1,106 @@
+<template>
+  <el-dialog :title="crud.status.title" :close-on-click-modal="false" :before-close="crud.cancelCU" :visible="crud.status.cu > 0" width="1000px">
+    <el-form ref="form" :inline="true" :model="form" :rules="rules" label-width="115px">
+      <el-form-item label="产品名称" prop="productName">
+        <el-input v-model="form.productName" style="width: 180px;" />
+      </el-form-item>
+      <el-form-item label="品种类型" prop="plantBreedId">
+        <el-select v-model="form.plantBreedId" placeholder="请选择" style="width: 180px;" @change="handleChange">
+          <el-option v-for="item in typeList" :key="item.id" :label="item.name" :value="item.id" />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="所属企业" prop="cyyImplementationsId">
+        <el-select v-model="form.cyyImplementationsId" placeholder="请选择" style="width: 180px;" @change="handleChange">
+          <el-option v-for="item in implementList" :key="item.id" :label="item.name" :value="item.id" />
+        </el-select>
+      </el-form-item>
+      <div>
+        <el-form-item label="产品介绍">
+          <el-input v-model="form.productIntroduction" type="textarea" style="width: 485px;" rows="4" />
+        </el-form-item>
+      </div>
+
+      <div style="padding-left:115px">
+        <img-upload ref="upload" @imgUpload="imgUpload" />
+      </div>
+    </el-form>
+    <div slot="footer" class="dialog-footer">
+      <el-button @click="crud.cancelCU">取消</el-button>
+      <el-button :loading="crud.status.cu === 2" type="primary" @click="crud.submitCU">确认</el-button>
+    </div>
+  </el-dialog>
+</template>
+
+<script>
+import { breedList } from '@/api/wisdom/plantBreed'
+import { getImplement } from '@/api/wisdom/project'
+import imgUpload from '@/components/imgUpload'
+import CRUD, { form, crud } from '@crud/crud'
+
+const defaultForm = { id: null, productCode: null, productName: null, batchNo: null, plantBreedId: null, plantBreedCode: null, plantBreedName: null, productIntroduction: null, cyyImplementationsId: null,  status: null, info: null, by1: null, by2: null, picList: [], createTime: null, ord: null, updateTimeStr: null }
+export default {
+  components: {
+    imgUpload
+  },
+  mixins: [form(defaultForm), crud()],
+  data() {
+    return {
+      typeList: [],
+      implementList: [],
+      rules: {
+        productName: [
+          { required: true, message: '请选择产品名称', trigger: 'change' }
+        ],
+        plantBreedId: [
+          { required: true, message: '请选择品种名称', trigger: 'change' }
+        ],
+        cyyImplementationsId: [
+          { required: true, message: '请选择所属企业', trigger: 'change' }
+        ]
+      }
+    }
+  },
+  mounted() {
+    this.getData()
+  },
+  methods: {
+    [CRUD.HOOK.beforeToCU](crud, form) {
+      this.$nextTick(() => {
+        if (this.$refs.upload && this.$refs.upload.length > 0) { this.$refs.upload.pictrueList = [] }
+      })
+      if (form.picList && form.picList.length > 0) {
+        this.form.plantSyProductPic = form.picList.map((item) => item).join(',')
+      }
+      this.$nextTick(() => {
+        this.$refs.upload.setValue(form)
+      })
+    },
+    [CRUD.HOOK.beforeToAdd]() {
+      this.form.plantSyProductPic = ""
+    },
+    handleChange(value) {
+      this.typeList.map(item => {
+        if (item.id === value) {
+          this.form.plantBreedName = item.name
+          this.form.plantBreedCode = item.code
+        }
+      })
+    
+    },
+    getData() {
+      breedList().then(res => {
+        this.typeList = JSON.parse(JSON.stringify(res.content))
+      })
+      getImplement().then(res => {
+        console.log(res)
+        this.implementList = res.content
+        console.log(this.implementList)
+      })
+    },
+    imgUpload(val) {
+      console.log(val)
+      this.form.plantSyProductPic = val
+    }
+  }
+}
+</script>

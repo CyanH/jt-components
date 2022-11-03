@@ -1,0 +1,42 @@
+import request from '@/utils/request'
+import qs from 'qs'
+
+export function add(data) {
+  return request({
+    url: 'api/plantFarmWorkRecords',
+    method: 'post',
+    data
+  })
+}
+
+export function del(ids) {
+  return request({
+    url: 'api/plantFarmWorkRecords/',
+    method: 'delete',
+    data: ids
+  })
+}
+
+export function edit(data) {
+  return request({
+    url: 'api/plantFarmWorkRecords',
+    method: 'put',
+    data
+  })
+}
+
+export function getPlantBreedByMassif(params) {
+  return request({
+    url: 'api/plantFarmWorkRecords/getPlantBreedByMassif?' + qs.stringify(params, { indices: false }),
+    method: 'get'
+  })
+}
+
+export function getpickPerson(params) {
+  return request({
+    url: 'api/plantFarmWorkRecords/getWorker?' + qs.stringify(params, { indices: false }),
+    method: 'get'
+  })
+}
+
+export default { add, edit, del, getpickPerson, getPlantBreedByMassif }

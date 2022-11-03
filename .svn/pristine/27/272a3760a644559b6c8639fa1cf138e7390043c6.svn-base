@@ -1,0 +1,42 @@
+import request from '@/utils/request'
+import qs from 'qs'
+
+export function add(data) {
+  return request({
+    url: 'api/plantSyjl',
+    method: 'post',
+    data
+  })
+}
+
+export function del(ids) {
+  return request({
+    url: 'api/plantSyjl/',
+    method: 'delete',
+    data: ids
+  })
+}
+
+export function edit(data) {
+  return request({
+    url: 'api/plantSyjl',
+    method: 'put',
+    data
+  })
+}
+
+export function getAmount(params) {
+  return request({
+    url: 'api/plantSyjl/getAmount?' + qs.stringify(params, { indices: false }),
+    method: 'get'
+  })
+}
+
+export function getBySyjl(params) {
+  return request({
+    url: 'api/plantSyjl/getBySyjl?' + qs.stringify(params, { indices: false }),
+    method: 'get'
+  })
+}
+
+export default { add, edit, del, getAmount, getBySyjl }

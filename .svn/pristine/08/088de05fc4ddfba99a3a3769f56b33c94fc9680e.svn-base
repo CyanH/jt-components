@@ -1,0 +1,165 @@
+<template>
+  <div class="page container-component">
+    <div class="container-full">
+      <div class="container-full__body">
+        <div ref="body" class="container-content">
+          <!--工具栏-->
+          <div class="head-container">
+            <eHeader :dict="dict" :permission="permission" />
+            <crudOperation :permission="permission" @choose="handleChoose" />
+          </div>
+          <!--列表渲染-->
+          <div v-show="chooseType === 'card'" class="cardFlex">
+            <el-card v-for="(item, index) in crud.data" :key="index" shadow="hover" class="card" @click.native="crud.toView(item)">
+              <span @click.stop>
+                <el-dropdown trigger="click" placement="bottom" class="card-more" @command="handleCommand">
+                  <span class="el-dropdown-link">
+                    <el-button slot="reference" icon="el-icon-alimore" type="more" />
+                  </span>
+                  <el-dropdown-menu slot="dropdown">
+                    <el-dropdown-item v-permission="['admin', 'produceInspect:edit']" icon="el-icon-aliedit" :command="{ name: 'edit', value: item }">编辑</el-dropdown-item>
+                    <el-dropdown-item v-permission="['admin', 'produceInspect:del']" icon="el-icon-alidel" :command="{ name: 'del', value: item}">删除</el-dropdown-item>
+                  </el-dropdown-menu>
+                </el-dropdown>
+              </span>
+
+              <div class="title">{{ item.name }}</div>
+              <div class="wrap"><span class="tip">排序：</span>{{ item.jobSort }}</div>
+              <div class="wrap"><span class="tip">状态：</span>{{ item.enabled === true?'启用':'停用' }}</div>
+              <div class="wrap"><span class="tip">操作时间：</span>{{ parseTime(item.updateTime,'{y}-{m}-{d}') }}</div>
+            </el-card>
+          </div>
+          <!--表格渲染-->
+          <el-table v-show="chooseType === 'list'"  ref="table" v-loading="crud.loading" :data="crud.data" style="width: 100%;" :max-height="tableHeight" @selection-change="crud.selectionChangeHandler">
+            <el-table-column type="selection" width="55" />
+            <el-table-column prop="name" label="名称" />
+            <el-table-column prop="jobSort" label="排序">
+              <template slot-scope="scope">
+                {{ scope.row.jobSort }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="status" label="状态" align="center">
+              <template slot-scope="scope">
+                <el-switch
+                  v-model="scope.row.enabled"
+                  active-color="#409EFF"
+                  inactive-color="#F56C6C"
+                  @change="changeEnabled(scope.row, scope.row.enabled)"
+                />
+              </template>
+            </el-table-column>
+            <!-- <el-table-column prop="createTime" label="创建日期" /> -->
+            <el-table-column prop="updateTime" label="操作时间" sortable>
+              <template slot-scope="scope">
+                {{ parseTime(scope.row.updateTime,'{y}-{m}-{d}') }}
+              </template>
+            </el-table-column>
+            <!--   编辑与删除   -->
+            <el-table-column
+              v-if="checkPer(['admin','job:edit','job:del'])"
+              label="操作"
+              width="180px"
+              align="center"
+              fixed="right"
+            >
+              <template slot-scope="scope">
+                <udOperation
+                  :data="scope.row"
+                  :permission="permission"
+                />
+              </template>
+            </el-table-column>
+          </el-table>
+          <!--分页组件-->
+          <pagination />
+          <!--表单渲染-->
+          <eForm :job-status="dict.job_status" />
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import crudJob from '@/api/system/job'
+import eHeader from './module/header'
+import eForm from './module/form'
+import CRUD, { presenter } from '@crud/crud'
+import crudOperation from '@crud/CRUD.operation'
+import pagination from '@crud/Pagination'
+import udOperation from '@crud/UD.operation'
+export default {
+  name: 'Job',
+  components: { eHeader, eForm, crudOperation, pagination, udOperation },
+  cruds() {
+    return CRUD({
+      title: '岗位',
+      url: 'api/job',
+      sort: ['jobSort,asc', 'id,desc'],
+      crudMethod: { ...crudJob }
+    })
+  },
+  mixins: [presenter()],
+  // 数据字典
+  dicts: ['job_status'],
+  data() {
+    return {
+      permission: {
+        add: ['admin', 'job:add'],
+        edit: ['admin', 'job:edit'],
+        del: ['admin', 'job:del']
+      },
+      tableHeight: null,
+      chooseType: 'list',
+    }
+  },
+  mounted() {
+    this.tableHeight = this.$refs.body.offsetHeight - 158 - 40
+  },
+  methods: {
+    // 改变状态
+    changeEnabled(data, val) {
+      this.$confirm('此操作将 "' + this.dict.label.job_status[val] + '" ' + data.name + '岗位, 是否继续？', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(() => {
+        // eslint-disable-next-line no-undef
+        crudJob.edit(data).then(() => {
+          // eslint-disable-next-line no-undef
+          this.crud.notify(this.dict.label.job_status[val] + '成功', 'success')
+        }).catch(err => {
+          data.enabled = !data.enabled
+          console.log(err.data.message)
+        })
+      }).catch(() => {
+        data.enabled = !data.enabled
+      })
+    },
+    handleChoose(value) {
+      this.chooseType = value
+    },
+    handleCommand(command) {
+      if (command.name === 'view') {
+        this.crud.toView(command.value)
+      } else if (command.name === 'edit') {
+        this.crud.toEdit(command.value)
+      } else if (command.name === 'del') {
+        this.$confirm('确定删除该条记录吗？', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(() => {
+          this.crud.doDelete(command.value)
+        })
+      }
+    },
+  }
+}
+</script>
+
+<style rel="stylesheet/scss" lang="scss" scoped>
+ ::v-deep .el-input-number .el-input__inner {
+    text-align: left;
+  }
+</style>

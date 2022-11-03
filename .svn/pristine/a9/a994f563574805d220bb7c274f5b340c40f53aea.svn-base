@@ -1,0 +1,136 @@
+import Vue from 'vue'
+import VueRouter from 'vue-router'
+
+// 进度条
+import NProgress from 'nprogress'
+import 'nprogress/nprogress.css'
+
+import store from '@/store'
+import util from '@/libs/util.js'
+
+// 路由数据
+import routes from './routes'
+
+import { getToken } from '@/utils/auth' // getToken from cookie
+import { buildMenus } from '@/api/system/menu'
+import { filterAsyncRouter } from '@/utils/permission'
+
+// fix vue-router NavigationDuplicated
+const VueRouterPush = VueRouter.prototype.push
+VueRouter.prototype.push = function push(location) {
+  return VueRouterPush.call(this, location).catch(err => err)
+}
+const VueRouterReplace = VueRouter.prototype.replace
+VueRouter.prototype.replace = function replace(location) {
+  return VueRouterReplace.call(this, location).catch(err => err)
+}
+
+Vue.use(VueRouter)
+
+// 导出路由 在 main.js 里使用
+const router = new VueRouter({
+  mode: 'history',
+  base: 'jlmz/source',
+  scrollBehavior: () => ({ y: 0 }),
+  routes
+})
+
+const whiteList = ['/login']// no redirect whitelist
+
+router.beforeEach(async(to, from, next) => {
+  // 确认已经加载多标签页数据 https://github.com/d2-projects/d2-admin/issues/201
+  await store.dispatch('page/isLoaded')
+  NProgress.start()
+
+  if (getToken()) {
+    // 已登录且要跳转的页面是登录页
+    if (to.path === '/login') {
+      next({ path: '/' })
+      NProgress.done()
+    } else {
+      if (store.getters.roles.length === 0) { // 判断当前用户是否已拉取完user_info信息
+        store.dispatch('user/GetInfo').then(() => { // 拉取user_info
+          // 动态路由，拉取菜单
+          loadMenus(next, to)
+        }).catch(() => {
+          store.dispatch('user/LogOut').then(() => {
+            location.reload() // 为了重新实例化vue-router对象 避免bug
+          })
+        })
+        // 登录时未拉取 菜单，在此处拉取
+      } else if (store.getters.loadMenus) {
+        // 修改成false，防止死循环
+        store.dispatch('user/updateLoadMenus')
+        loadMenus(next, to)
+      } else {
+        next()
+      }
+    }
+  } else {
+    /* has no token */
+    if (whiteList.indexOf(to.path) !== -1) { // 在免登录白名单，直接进入
+      next()
+    } else {
+      // 否则全部重定向到登录页
+      if (process.env.NODE_ENV === 'development') {
+        next(`/login?redirect=${to.fullPath}`)
+      } else if (process.env.NODE_ENV === 'production') {
+        window.location.href = 'http://10.12.0.104:92/jlmz/admin/login'
+      }
+      NProgress.done()
+    }
+  }
+})
+
+export const loadMenus = (next, to) => {
+  buildMenus().then(res => {
+    const rdata = JSON.parse(JSON.stringify(res))
+    const header = []
+    rdata.map(item => {
+      if (!item.meta) {
+        const path = item.path
+        item.children[0].path = path
+        item.path = '/'
+        const obj = {
+          path,
+          name: item.children[0].name,
+          meta: item.children[0].meta
+        }
+        header.push(obj)
+      } else {
+        header.push(item)
+      }
+    })
+    const rewriteRoutes = filterAsyncRouter(rdata, true)
+    rewriteRoutes.push({ path: '*', redirect: '/404', hidden: true })
+    router.addRoutes(rewriteRoutes) // 动态添加可访问路由表
+    next({ ...to, replace: true })
+    // 处理路由 得到每一级的路由设置
+    store.commit('page/init', router.getRoutes())
+
+    const menuHeader = supplementPath([
+      ...header])
+    // 设置顶栏菜单
+    store.commit('menu/headerSet', menuHeader)
+  })
+}
+
+router.afterEach(to => {
+  NProgress.done() // finish progress bar
+  // 多页控制 打开新的页面
+  store.dispatch('page/open', to)
+  // 更改标题
+  util.title(to.meta.title)
+})
+
+export default router
+
+function supplementPath(menu) {
+  return menu.map(e => ({
+    ...e,
+    path: e.path,
+    ...e.children ? {
+      children: supplementPath(e.children)
+    } : {}
+  }))
+}

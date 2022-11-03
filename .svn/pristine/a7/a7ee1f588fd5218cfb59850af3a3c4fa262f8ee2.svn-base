@@ -1,0 +1,318 @@
+<template>
+  <div class="page container-component">
+    <div class="container-full">
+      <div class="container-full__body">
+        <div ref="body" class="container-content">
+          <!--工具栏-->
+          <div class="head-container">
+            <div v-if="crud.props.searchToggle">
+              <!-- 搜索 -->
+              <el-input v-model="query.jobName" prefix-icon="el-icon-alisearch" clearable size="small" placeholder="输入任务名称搜索" style="width: 200px;" class="filter-item" @keyup.enter.native="crud.toQuery" />
+              <date-range-picker v-model="query.updateTime" class="date-item" />
+              <rrOperation />
+            </div>
+            <crudOperation :permission="permission" @choose="handleChoose">
+              <!-- 任务日志 -->
+              <el-button
+                slot="right"
+                class="filter-item"
+                type="info"
+                icon="el-icon-tickets"
+                @click="doLog"
+              >日志</el-button>
+            </crudOperation>
+            <Log ref="log" />
+          </div>
+          <!--Form表单-->
+          <el-dialog :close-on-click-modal="false" :before-close="crud.cancelCU" :visible="crud.status.cu > 0" :title="crud.status.title" append-to-body width="730px">
+            <el-form ref="form" :inline="true" :model="form" :rules="rules" size="small" label-width="100px">
+              <el-form-item label="任务名称" prop="jobName">
+                <el-input v-model="form.jobName" style="width: 220px;" />
+              </el-form-item>
+              <el-form-item label="任务描述" prop="description">
+                <el-input v-model="form.description" style="width: 220px;" />
+              </el-form-item>
+              <el-form-item label="Bean名称" prop="beanName">
+                <el-input v-model="form.beanName" style="width: 220px;" />
+              </el-form-item>
+              <el-form-item label="执行方法" prop="methodName">
+                <el-input v-model="form.methodName" style="width: 220px;" />
+              </el-form-item>
+              <el-form-item label="Cron表达式" prop="cronExpression">
+                <el-input v-model="form.cronExpression" style="width: 220px;" />
+              </el-form-item>
+              <el-form-item label="子任务ID">
+                <el-input v-model="form.subTask" placeholder="多个用逗号隔开，按顺序执行" style="width: 220px;" />
+              </el-form-item>
+              <el-form-item label="任务负责人" prop="personInCharge">
+                <el-input v-model="form.personInCharge" style="width: 220px;" />
+              </el-form-item>
+              <el-form-item label="告警邮箱" prop="email">
+                <el-input v-model="form.email" placeholder="多个邮箱用逗号隔开" style="width: 220px;" />
+              </el-form-item>
+              <el-form-item label="失败后暂停">
+                <el-radio-group v-model="form.pauseAfterFailure" style="width: 220px">
+                  <el-radio :label="true">是</el-radio>
+                  <el-radio :label="false">否</el-radio>
+                </el-radio-group>
+              </el-form-item>
+              <el-form-item label="任务状态" prop="isPause">
+                <el-radio-group v-model="form.isPause" style="width: 220px">
+                  <el-radio :label="false">启用</el-radio>
+                  <el-radio :label="true">暂停</el-radio>
+                </el-radio-group>
+              </el-form-item>
+              <el-form-item label="参数内容" prop="params">
+                <el-input v-model="form.params" style="width: 556px;" rows="4" type="textarea" />
+              </el-form-item>
+            </el-form>
+            <div slot="footer" class="dialog-footer">
+              <el-button :loading="crud.status.cu === 2" type="primary" @click="crud.submitCU">确认</el-button>
+              <el-button @click="crud.cancelCU">取消</el-button>
+            </div>
+          </el-dialog>
+          <!--列表渲染-->
+          <div v-show="chooseType === 'card'" class="cardFlex">
+            <el-card v-for="(item,index) in crud.data" :key="index" shadow="hover" class="card">
+             
+              <el-dropdown trigger="click" placement="bottom" class="card-more" @command="handleCommand">
+                <span class="el-dropdown-link">
+                  <el-button slot="reference" icon="el-icon-alimore" type="more" />
+                </span>
+                <el-dropdown-menu slot="dropdown">
+                  <el-dropdown-item v-permission="['admin','timing:edit']" icon="el-icon-aliedit" :command="{name:'edit',value:item}">编辑</el-dropdown-item>
+                  <el-dropdown-item v-permission="['admin','timing:edit']" icon="el-icon-alizx" :command="{name:'carry',value:item.id}">执行</el-dropdown-item>
+                  <el-dropdown-item v-permission="['admin','timing:edit']" :icon="item.isPause? 'el-icon-alireset':'el-icon-alipause'" :command="{name:'pause',value:item}">{{ item.isPause ? '恢复' : '暂停' }}</el-dropdown-item>
+                  <el-dropdown-item v-permission="['admin','timing:edit']" icon="el-icon-alidel" :command="{name:'del',value:item.id}">删除</el-dropdown-item>
+                </el-dropdown-menu>
+              </el-dropdown>
+
+              <div class="title">{{ item.jobName }}</div>
+              <div class="wrap"><span class="tip">Bean名称：</span>{{ item.beanName }}</div>
+              <div class="wrap"><span class="tip">状态：</span> <el-tag :type="item.isPause ? 'warning' : 'success'">{{ item.isPause ? '已暂停' : '运行中' }}</el-tag></div>
+              <div class="wrap"><span class="tip">操作时间：</span>{{ parseTime(item.updateTime,'{y}-{m}-{d}') }}</div>
+            </el-card>
+          </div>
+          <!--表格渲染-->
+          <el-table v-show="chooseType==='list'" ref="table" v-loading="crud.loading" :data="crud.data" style="width: 100%;" :max-height="tableHeight" :default-sort="{prop: 'id', order: 'descending'}" @selection-change="crud.selectionChangeHandler">
+            <el-table-column :selectable="checkboxT" type="selection" width="55" />
+            <el-table-column :show-overflow-tooltip="true" prop="id" label="任务ID" sortable />
+            <el-table-column :show-overflow-tooltip="true" prop="jobName" label="任务名称" sortable />
+            <el-table-column :show-overflow-tooltip="true" prop="beanName" label="Bean名称" sortable />
+            <el-table-column :show-overflow-tooltip="true" prop="methodName" label="执行方法" sortable />
+            <el-table-column :show-overflow-tooltip="true" prop="params" label="参数" sortable />
+            <el-table-column :show-overflow-tooltip="true" prop="cronExpression" label="cron表达式" sortable />
+            <el-table-column :show-overflow-tooltip="true" prop="isPause" width="90px" label="状态" sortable>
+              <template slot-scope="scope">
+                <el-tag :type="scope.row.isPause ? 'warning' : 'success'">{{ scope.row.isPause ? '已暂停' : '运行中' }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column :show-overflow-tooltip="true" prop="description" width="150px" label="描述" sortable />
+            <!-- <el-table-column :show-overflow-tooltip="true" prop="createTime" width="136px" label="创建日期" sortable /> -->
+            <el-table-column prop="updateTime" label="操作时间" width="136px" sortable>
+              <template slot-scope="scope">
+                {{ parseTime(scope.row.updateTime,'{y}-{m}-{d}') }}
+              </template>
+            </el-table-column>
+            <el-table-column v-if="checkPer(['admin','timing:edit','timing:del'])" label="操作" width="120px" align="center" fixed="right">
+              <template slot-scope="scope">
+                <el-dropdown trigger="click" placement="bottom" @command="handleCommand">
+                  <span class="el-dropdown-link">
+                    <el-button slot="reference" icon="el-icon-alimore" type="more" />
+                  </span>
+                  <el-dropdown-menu slot="dropdown">
+                    <el-dropdown-item v-permission="['admin','timing:edit']" icon="el-icon-aliedit" :command="{name:'edit',value:scope.row}">编辑</el-dropdown-item>
+                    <el-dropdown-item v-permission="['admin','timing:edit']" icon="el-icon-alizx" :command="{name:'carry',value:scope.row.id}">执行</el-dropdown-item>
+                    <el-dropdown-item v-permission="['admin','timing:edit']" :icon="scope.row.isPause? 'el-icon-alireset':'el-icon-alipause'" :command="{name:'pause',value:scope.row}">{{ scope.row.isPause ? '恢复' : '暂停' }}</el-dropdown-item>
+                    <el-dropdown-item v-permission="['admin','timing:edit']" icon="el-icon-alidel" :command="{name:'del',value:scope.row.id}">删除</el-dropdown-item>
+                  </el-dropdown-menu>
+                </el-dropdown>
+              </template>
+            </el-table-column>
+          </el-table>
+          <!--分页组件-->
+          <pagination />
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import crudJob from '@/api/system/timing'
+import Log from './log'
+import CRUD, { presenter, header, form, crud } from '@crud/crud'
+import rrOperation from '@crud/RR.operation'
+import crudOperation from '@crud/CRUD.operation'
+import pagination from '@crud/Pagination'
+import DateRangePicker from '@/components/DateRangePicker'
+
+const defaultForm = { id: null, jobName: null, subTask: null, beanName: null, methodName: null, params: null, cronExpression: null, pauseAfterFailure: true, isPause: false, personInCharge: null, email: null, description: null }
+export default {
+  name: 'Timing',
+  components: { Log, pagination, crudOperation, rrOperation, DateRangePicker },
+  cruds() {
+    return CRUD({ title: '定时任务', url: 'api/jobs', crudMethod: { ...crudJob }})
+  },
+  mixins: [presenter(), header(), form(defaultForm), crud()],
+  data() {
+    return {
+      permission: {
+        add: ['admin', 'timing:add'],
+        edit: ['admin', 'timing:edit'],
+        del: ['admin', 'timing:del']
+      },
+      rules: {
+        jobName: [
+          { required: true, message: '请输入任务名称', trigger: 'blur' }
+        ],
+        description: [
+          { required: true, message: '请输入任务描述', trigger: 'blur' }
+        ],
+        beanName: [
+          { required: true, message: '请输入Bean名称', trigger: 'blur' }
+        ],
+        methodName: [
+          { required: true, message: '请输入方法名称', trigger: 'blur' }
+        ],
+        cronExpression: [
+          { required: true, message: '请输入Cron表达式', trigger: 'blur' }
+        ],
+        personInCharge: [
+          { required: true, message: '请输入负责人名称', trigger: 'blur' }
+        ],
+        isPause: [
+          { required: true, message: '请选择任务状态', trigger: 'blur' }
+        ]
+      },
+      tableHeight: null,
+      chooseType: 'list'
+    }
+  },
+  mounted() {
+    this.tableHeight = this.$refs.body.offsetHeight - 158 - 40
+  },
+  methods: {
+    // 执行
+    execute(id) {
+      crudJob.execution(id).then(res => {
+        this.crud.notify('执行成功', CRUD.NOTIFICATION_TYPE.SUCCESS)
+      }).catch(err => {
+        console.log(err.response.data.message)
+      })
+    },
+    // 改变状态
+    updateStatus(id, status) {
+      if (status === '恢复') {
+        this.updateParams(id)
+      }
+      crudJob.updateIsPause(id).then(res => {
+        this.crud.toQuery()
+        this.crud.notify(status + '成功', CRUD.NOTIFICATION_TYPE.SUCCESS)
+      }).catch(err => {
+        console.log(err.response.data.message)
+      })
+    },
+    updateParams(id) {
+      console.log(id)
+    },
+    delMethod(id) {
+      crudJob.del([id]).then(() => {
+        this.crud.dleChangePage(1)
+        this.crud.delSuccessNotify()
+        this.crud.toQuery()
+      }).catch(() => {
+        this.$notify.error({
+          title: '错误',
+          message: '删除失败'
+        })
+      })
+    },
+    // 显示日志
+    doLog() {
+      this.$refs.log.dialog = true
+      this.$refs.log.doInit()
+    },
+    checkboxT(row, rowIndex) {
+      return row.id !== 1
+    },
+    handleCommand(command) {
+      if (command.name === 'edit') {
+        this.crud.toEdit(command.value)
+      } else if (command.name === 'carry') {
+        this.execute(command.value)
+      } else if (command.name === 'pause') {
+        this.updateStatus(command.value.id, command.value.isPause ? '恢复' : '暂停')
+      } else if (command.name === 'del') {
+        this.$confirm('确定停止并删除该任务吗？', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(() => {
+          this.delMethod(command.value)
+        })
+      }
+    },
+    handleChoose(value) {
+      this.chooseType = value
+    }
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+.cardFlex{
+  display: flex;
+  flex-wrap: wrap;
+  max-height: calc(100% - 198px);
+  overflow-y: auto;
+
+  .card{
+    margin-right:20px;
+    margin-bottom: 20px;
+    cursor: pointer;
+    position: relative;
+    width: 220px;
+    height: 140px;
+
+    ::v-deep .el-card__body{
+      padding: 15px 20px;
+    }
+
+    .card-more{
+      position: absolute;
+      right: 0;
+      top: 5px;
+    }
+
+    .title{
+      color: #5b5e69;
+      font-size: 16px;
+      font-weight: 600;
+      margin: 5px 0;
+    }
+    .wrap{
+      color: #999;
+      font-size: 14px;
+      margin-top: 3px;
+    }
+
+    .date{
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      background: rgba(0,0,0,0.45);
+      color: #fff;
+      padding: 5px 8px;
+      font-size: 14px;
+      display: none;
+    }
+    &:hover{
+      .date{
+        display: block;
+      }
+    }
+  }
+}
+</style>

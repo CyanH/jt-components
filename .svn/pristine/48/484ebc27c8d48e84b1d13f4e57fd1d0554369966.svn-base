@@ -1,0 +1,395 @@
+<template>
+  <div v-if="pictrueList" style="display: flex; width: 100%; flex-wrap: wrap">
+    <div v-for="(item, index) in pictrueList" :key="index" class="imgCard">
+      <div>
+        <el-image
+          v-if="item.type === 'image'"
+          class="img"
+          :src="item.url"
+          fit="contain"
+        />
+        <img
+          v-else-if="item.type === 'other'"
+          class="img"
+          src="~@/assets/images/other.svg"
+        >
+        <div v-else>
+          <div v-for="i in svgList" :key="i.type">
+            <div v-if="i.type === item.type">
+              <img class="img" :src="i.src">
+            </div>
+          </div>
+        </div>
+        <div class="preDel">
+          <a v-if="pictrueType != 'image'" :href="item.url" target="_blank">
+            <i class="el-icon-zoom-in" style="color: #fff" /></a>
+          <i v-else class="el-icon-zoom-in" @click="handlePreview(item)" />
+          <i
+            class="el-icon-download"
+            style="padding: 5px 5px"
+            @click="handleDownload(item)"
+          />
+          <i class="el-icon-delete" @click="handleDeleImg(item, index)" />
+        </div>
+      </div>
+    </div>
+    <el-dialog :visible.sync="previewVisible" :append-to-body="true">
+      <img width="100%" :src="dialogImageUrl" alt="">
+    </el-dialog>
+    <br>
+    <el-upload
+      ref="myUpload"
+      class="avatar-uploader"
+      name="filename"
+      :headers="headers"
+      :action="baseApi + '/api/cyyPlanMaster/upload'"
+      :on-success="handleSuccess"
+      :show-file-list="false"
+    >
+      <el-button
+        class="el-icon-plus avatar-uploader-icon"
+        style="width: 148px; height: 148px"
+      />
+    </el-upload>
+  </div>
+</template>
+
+<script>
+import { mapGetters } from 'vuex'
+import { getToken } from '@/utils/auth'
+export default {
+  data() {
+    return {
+      svgList: [
+        {
+          src: require('@/assets/images/pdf.svg'),
+          type: 'pdf'
+        },
+        {
+          src: require('@/assets/images/ppt.svg'),
+          type: 'ppt'
+        },
+        {
+          src: require('@/assets/images/txt.svg'),
+          type: 'txt'
+        },
+        {
+          src: require('@/assets/images/xls.svg'),
+          type: 'xlsx'
+        },
+        {
+          src: require('@/assets/images/xls.svg'),
+          type: 'xls'
+        },
+        {
+          src: require('@/assets/images/word.svg'),
+          type: 'docx'
+        },
+        {
+          src: require('@/assets/images/word.svg'),
+          type: 'doc'
+        }
+      ],
+      headers: {
+        Authorization: getToken()
+      },
+      pictrueList: [],
+      picAddress: '',
+      pictrueType: '',
+      previewVisible: false,
+      dialogImageUrl: ''
+    }
+  },
+  computed: {
+    ...mapGetters(['fileListUploadApi', 'baseApi'])
+  },
+  methods: {
+    setValue(row) {
+      if (row.picList) {
+        this.picList = row.picList
+        this.fileList = row.picList
+        this.pictrueList = row.picList.map((item, index) => {
+          console.log(item, 'item')
+          var obj = {}
+          obj.url = this.baseApi + '/file' + item
+          obj.address = item
+          obj.name = item
+          if (
+            item.lastIndexOf('.bmp') !== -1 ||
+              item.lastIndexOf('.jpg') !== -1 ||
+              item.lastIndexOf('.jpeg') !== -1 ||
+              item.lastIndexOf('.png') !== -1 ||
+              item.lastIndexOf('.gif') !== -1 ||
+              item.lastIndexOf('.webp') !== -1
+          ) {
+            obj.type = 'image'
+          } else if (
+            item.lastIndexOf('.docx') === -1 &&
+              item.lastIndexOf('.doc') === -1 &&
+              item.lastIndexOf('.xlsx') === -1 &&
+              item.lastIndexOf('.ppt') === -1 &&
+              item.lastIndexOf('.xls') === -1 &&
+              item.lastIndexOf('.pdf') === -1 &&
+              item.lastIndexOf('.txt') === -1
+          ) {
+            obj.type = 'other'
+          } else {
+            obj.type = item.slice(item.lastIndexOf('.') + 1, item.length)
+          }
+          return obj
+        })
+      } else {
+        this.pictrueList = []
+      }
+    },
+    setList(val) {
+      if (val) {
+        this.picList = val
+        this.fileList = val
+        console.log(val, 'pic')
+        this.pictrueList = val.map((item, index) => {
+          console.log(item, 'item')
+          var obj = {}
+          obj.url = this.baseApi + '/file' + item.address
+          obj.address = item.address
+          obj.name = item.name
+          obj.size = item.size
+          console.log(item.address, 'add')
+          if (
+            item.address.lastIndexOf('.bmp') !== -1 ||
+            item.address.lastIndexOf('.jpg') !== -1 ||
+            item.address.lastIndexOf('.jpeg') !== -1 ||
+            item.address.lastIndexOf('.png') !== -1 ||
+            item.address.lastIndexOf('.gif') !== -1 ||
+            item.address.lastIndexOf('.webp') !== -1
+          ) {
+            obj.type = 'image'
+          } else if (
+            item.address.lastIndexOf('.docx') === -1 &&
+            item.address.lastIndexOf('.doc') === -1 &&
+            item.address.lastIndexOf('.xlsx') === -1 &&
+            item.address.lastIndexOf('.ppt') === -1 &&
+            item.address.lastIndexOf('.xls') === -1 &&
+            item.address.lastIndexOf('.pdf') === -1 &&
+            item.address.lastIndexOf('.txt') === -1
+          ) {
+            obj.type = 'other'
+          } else {
+            obj.type = item.address.slice(
+              item.address.lastIndexOf('.') + 1,
+              item.address.length
+            )
+          }
+          return obj
+        })
+      } else {
+        this.pictrueList = []
+      }
+    },
+    setImgList(row) {
+      if (row.picList) {
+        this.picList = row.picList
+        this.fileList = row.picList
+        console.log(row.picList, 'pic')
+        this.pictrueList = row.picList.map((item, index) => {
+          console.log(item, 'item')
+          var obj = {}
+          obj.url = this.baseApi + '/file' + item.address
+          obj.address = item.address
+          obj.name = item.name
+          obj.size = item.size
+          console.log(item.address, 'add')
+          if (
+            item.address.lastIndexOf('.bmp') !== -1 ||
+            item.address.lastIndexOf('.jpg') !== -1 ||
+            item.address.lastIndexOf('.jpeg') !== -1 ||
+            item.address.lastIndexOf('.png') !== -1 ||
+            item.address.lastIndexOf('.gif') !== -1 ||
+            item.address.lastIndexOf('.webp') !== -1
+          ) {
+            obj.type = 'image'
+          } else if (
+            item.address.lastIndexOf('.docx') === -1 &&
+            item.address.lastIndexOf('.doc') === -1 &&
+            item.address.lastIndexOf('.xlsx') === -1 &&
+            item.address.lastIndexOf('.ppt') === -1 &&
+            item.address.lastIndexOf('.xls') === -1 &&
+            item.address.lastIndexOf('.pdf') === -1 &&
+            item.address.lastIndexOf('.txt') === -1
+          ) {
+            obj.type = 'other'
+          } else {
+            obj.type = obj.address.slice(
+              item.address.lastIndexOf('.') + 1,
+              item.address.length
+            )
+          }
+          return obj
+        })
+      } else {
+        this.pictrueList = []
+      }
+    },
+    handleDownload(file) {
+      // downloadFile
+      console.log(file, 'file')
+      try {
+        const address = file.url
+        console.log(address, 'addresss')
+        if (address.endsWith('pdf')) {
+          this.downloadPDF(address, file.name)
+          var tempLink = document.createElement('a')
+          tempLink.style.display = 'none'
+          tempLink.href = address
+          tempLink.setAttribute('download', file.name)
+          tempLink.setAttribute('target', '_blank')
+          document.body.appendChild(tempLink)
+          tempLink.click()
+          document.body.removeChild(tempLink)
+        } else if (address.endsWith('pdf')) {
+          window.open(address, '_blank')
+        } else if (address.endsWith('pptx')) {
+          window.open(address, '_blank')
+        } else if (address.endsWith('xlsx')) {
+          window.open(address, '_blank')
+        } else if (address.endsWith('xls')) {
+          window.open(address, '_blank')
+        } else if (address.endsWith('doc')) {
+          window.open(address, '_blank')
+        } else if (address.endsWith('docx')) {
+          window.open(address, '_blank')
+        } else {
+          const name = address.substr(address.lastIndexOf('/') + 1)
+          this.downloadIamge(address, name)
+        }
+      } catch (err) {
+        // console.log(err);
+        this.$message({
+          type: 'error',
+          message: '图片下载失败'
+        })
+      }
+    },
+    downloadIamge(imgsrc, name) {
+      // 下载图片地址和图片名
+      name = name || 'image'
+
+      const image = new Image()
+      // 解决跨域 Canvas 污染问题
+      image.setAttribute('crossOrigin', 'anonymous')
+      image.onload = function() {
+        const canvas = document.createElement('canvas')
+        canvas.width = image.width
+        canvas.height = image.height
+        const context = canvas.getContext('2d')
+        context.drawImage(image, 0, 0, image.width, image.height)
+        const url = canvas.toDataURL('image/png') // 得到图片的base64编码数据
+        const a = document.createElement('a') // 生成一个a元素
+        const event = new MouseEvent('click') // 创建一个单击事件
+        a.download = name || 'photo' // 设置图片名称
+        a.href = url // 将生成的URL设置为a.href属性
+        a.dispatchEvent(event) // 触发a的单击事件
+      }
+      image.src = imgsrc
+    },
+    handlePreview(item) {
+      console.log(item)
+      this.previewVisible = true
+      this.dialogImageUrl = item.url
+      this.pictrueType = item.type === 'image' ? 'image' : 'txt'
+    },
+    handleSuccess(response, file, fileList) {
+      // fileList 附件
+      console.log(response, 'response')
+      var obj = {}
+      if (file.raw.type.indexOf('image') !== -1) {
+        obj.url = this.baseApi + '/file' + response.address
+        obj.name = response.name
+        obj.address = response.address
+        obj.size = response.size
+        obj.type = 'image'
+        this.pictrueList.splice(this.pictrueList.length, 0, obj)
+      } else {
+        obj.url = this.baseApi + '/file' + response.address
+        obj.name = response.name
+        obj.address = response.address
+        obj.size = response.size
+        obj.type = response.address.slice(
+          response.address.lastIndexOf('.') + 1,
+          response.address.length
+        )
+        if (
+          obj.type !== 'txt' &&
+          obj.type !== 'pdf' &&
+          obj.type !== 'docx' &&
+          obj.type !== 'doc' &&
+          obj.type !== 'xlsx' &&
+          obj.type !== 'xls' &&
+          obj.type !== 'ppt'
+        ) {
+          obj.type = 'other'
+        }
+        this.pictrueList.splice(this.pictrueList.length, 0, obj)
+      }
+      this.picAddress = this.pictrueList.map((item) => item.address).join(',')
+      console.log(this.picAddress, 'pic')
+      this.$emit('imgUpload', this.picAddress)
+    },
+    handleDeleImg(item, index) {
+      this.pictrueList.splice(index, 1)
+      if (this.pictrueList && this.pictrueList.length !== 0) {
+        for (var i = 0; i < this.picList.length; i++) {
+          if (this.picList[i] === item.address) {
+            this.picList.splice(i, 1)
+            this.picAddress = this.picList.map((item) => item).join(',')
+            this.$emit('imgUpload', this.picAddress)
+          }
+        }
+      } else {
+        console.log(this.picAddress, '111111111111111111111222')
+        this.picAddress = null
+        this.$emit('imgUpload', this.picAddress)
+      }
+    },
+    clear() {
+      this.$refs['myUpload'].clearFiles()
+      this.picAddress = ''
+      this.picList = []
+      this.pictrueList = []
+    }
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+.imgCard {
+  list-style-type: none;
+  margin: 0 10px 15px 10px;
+  position: relative;
+}
+.preDel {
+  height: 148px;
+  width: 148px;
+  position: absolute;
+  background: rgba(0, 0, 0, 0.4);
+  top: 0;
+  opacity: 0;
+  text-align: center;
+  line-height: 146px;
+  cursor: default;
+  color: #fff;
+  font-size: 20px;
+  opacity: 0;
+  transition: opacity 0.4s;
+  &:hover {
+    opacity: 1;
+  }
+  i{
+    cursor: pointer;
+  }
+}
+.img {
+  width: 148px;
+  height: 148px;
+}
+</style>

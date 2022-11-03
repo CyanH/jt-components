@@ -1,0 +1,55 @@
+<template>
+  <div class="filterBar">
+    <span class="text">筛选：</span>
+    <span v-for="(item,index) in list" :key="index" class="bar" :class="chooseIndex === index?'chooseBar':''" @click="handleClick(item,index)">{{item.label}}</span>
+  </div>
+</template>
+
+<script>
+export default {
+  props: {
+    list: Array
+  },
+  data() {
+    return {
+      chooseIndex: 0
+    }
+  },
+  methods: {
+    handleClick(item, index) {
+      this.chooseIndex = index
+      this.$emit('choose', item)
+    }
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+.filterBar{
+  padding-top: 12px;
+  padding-bottom: 5px;
+  display: flex;
+  align-items: center;
+}
+
+.text {
+  font-size: 14px;
+  color: #1d1f23;
+  letter-spacing: 0;
+}
+
+.bar {
+  padding: 5px 15px;
+  border: 1px solid;
+  border-color: transparent;
+  border-radius: 4px;
+  margin: 0 20px 0 8px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.chooseBar {
+  border-color: #24c139;
+  color: #24c139;
+}
+</style>

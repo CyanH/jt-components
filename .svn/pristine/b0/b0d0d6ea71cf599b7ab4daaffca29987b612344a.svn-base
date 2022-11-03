@@ -1,0 +1,232 @@
+<template>
+  <div class="page container-component">
+    <div class="container-full">
+      <div class="container-full__body">
+        <div ref="body" class="container-content">
+          <panel-group @handleSetLineChartData="handleSetLineChartData" />
+
+          <el-row
+            style="background: #fff; padding: 16px 16px 0; margin-bottom: 32px"
+          >
+            <line-chart ref="lineChart" />
+          </el-row>
+
+          <!-- 查看表单组件 -->
+          <el-dialog
+            class="view-dialog"
+            :fullscreen="fullscreen"
+            :close-on-click-modal="false"
+            :before-close="crud.closeView"
+            :visible="crud.status.view"
+            width="660px"
+          >
+            <div slot="title" class="el-dialog__title">
+              <span>{{ crud.status.title }}</span>
+              <el-button
+                class="dialog-fullscreen"
+                :icon="
+                  fullscreen
+                    ? 'el-icon-aliexitfullscreen'
+                    : 'el-icon-alifullscreen'
+                "
+                type="text"
+                @click="fullscreen = !fullscreen"
+              />
+            </div>
+
+            <el-form
+              ref="form"
+              :inline="true"
+              :model="form"
+              size="small"
+              label-width="90px"
+            >
+              <el-form-item label="设备类型">
+                <div style="width: 150px">{{ form.type }}</div>
+              </el-form-item>
+              <el-form-item label="设备名称">
+                <div style="width: 150px">{{ form.name }}</div>
+              </el-form-item>
+              <el-form-item label="设备编码">
+                <div style="width: 150px">{{ form.code }}</div>
+              </el-form-item>
+              <el-form-item label="版本编号">
+                <div style="width: 150px">{{ form.version }}</div>
+              </el-form-item>
+              <el-form-item label="异常内容">
+                <div>{{ form.exceptionInfo }}</div>
+              </el-form-item>
+              <el-form-item label="异常时间">
+                <div>{{ form.date }}</div>
+              </el-form-item>
+            </el-form>
+          </el-dialog>
+
+          <!--表格渲染-->
+          <el-table ref="table" :data="dataList" style="width: 100%">
+            <el-table-column prop="id" label="序号" min-width="" />
+            <el-table-column
+              prop="exceptionInfo"
+              label="预警记录"
+              min-width="200px"
+            />
+            <el-table-column prop="date" label="时间" />
+
+            <el-table-column label="操作" width="100px" align="center">
+              <template slot-scope="scope">
+                <el-button
+                  size="mini"
+                  type="primary"
+                  icon="el-icon-alipreview"
+                  @click="crud.toView(scope.row)"
+                  >查看</el-button
+                >
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import PanelGroup from "./dashboard/PanelGroup";
+import LineChart from "./dashboard/LineChart";
+// import wlwWaterData from '@/api/data/wlwWaterData'
+// import manage from '@/api/source/manage'
+// import { getWlwConfigRecordHome } from '@/api/equipment/wlwConfigRecord'
+import CRUD, { presenter, header, form, crud } from "@crud/crud";
+import resize from "@/utils/resize";
+
+const defaultForm = {
+  id: null,
+  wlwWaterQualityId: null,
+  wlwWaterQualityName: null,
+  wlwWaterQualityCode: null,
+  water: null,
+  oxygen: null,
+  ph: null,
+  oxidation: null,
+  data1: null,
+  data2: null,
+  data3: null,
+  data4: null,
+  data: null,
+  status: null,
+  ord: null,
+  info: null,
+  by1: null,
+  by2: null,
+};
+
+var dates = new Array();
+var waterArray = new Array();
+var oxygenArray = new Array();
+var phArray = new Array();
+var pondIdList = new Array();
+
+export default {
+  name: "WlwWeatherData",
+  mixins: [presenter(), header(), form(defaultForm), crud(), resize],
+  cruds() {
+    return CRUD({
+      title: "水质检测预警记录",
+      url: "api/wlwConfigRecord",
+      idField: "id",
+      sort: "id,desc",
+      query: { type: "水质检测" },
+    });
+  },
+  components: {
+    PanelGroup,
+    LineChart,
+  },
+  data() {
+    return {
+      pondNameList: [],
+      farmPondId: "",
+      dataList: [],
+      fullscreen: false,
+    };
+  },
+  created() {
+    this.getData();
+  },
+  methods: {
+    getData() {
+      manage.getFarmPond().then((res) => {
+        this.pondNameList = res.content;
+        this.farmPondId = this.pondNameList[0].id;
+        this.handleSetLineChartData(this.farmPondId);
+      });
+
+      this.timer = setTimeout(() => {
+        //设置延迟执行
+        //预警记录
+        getWlwConfigRecordHome({
+          type: "水质检测",
+          farmPondId: this.farmPondId,
+        }).then((res) => {
+          this.dataList = res.content;
+        });
+      }, 100);
+    },
+    handleSetLineChartData(type) {
+      dates = [];
+      waterArray = [];
+      oxygenArray = [];
+      phArray = [];
+      pondIdList = [];
+      //预警记录
+      getWlwConfigRecordHome({ type: "水质检测", farmPondId: type }).then(
+        (res) => {
+          this.dataList = res.content;
+        }
+      );
+
+      //根据塘口名称查数据
+      wlwWaterData.getSyData({ pondId: type }).then((res) => {
+        var wlwWaterDataList = res.content;
+        for (var i = 0; i < wlwWaterDataList.length; i++) {
+          if (wlwWaterDataList[i] != null) {
+            waterArray.push(wlwWaterDataList[i].water);
+            oxygenArray.push(wlwWaterDataList[i].oxygen);
+            phArray.push(wlwWaterDataList[i].ph);
+            dates.push(wlwWaterDataList[i].dateStr);
+            pondIdList.push(wlwWaterDataList[i].id);
+          }
+        }
+        this.$refs.lineChart.setOptions({
+          water: waterArray,
+          oxygen: oxygenArray,
+          ph: phArray,
+          date: dates,
+        });
+      });
+
+      // this.lineChartData = lineChartData[type]
+    },
+  },
+};
+</script>
+
+<style lang="scss" scoped>
+.page {
+  padding: 0 20px;
+}
+
+.container-content {
+  background: transparent !important;
+}
+.theme-default
+  .theme-container
+  .theme-container-main
+  .theme-container-main-body
+  .container-component
+  .container-full
+  .container-full__body
+  .container-content {
+  padding: 0px;
+}
+</style>

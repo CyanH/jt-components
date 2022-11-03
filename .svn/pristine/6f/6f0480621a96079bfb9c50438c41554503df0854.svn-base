@@ -1,0 +1,6 @@
+import Vue from 'vue'
+
+// 注意 有些组件使用异步加载会有影响
+Vue.component('icon', () => import('./icon'))
+Vue.component('icon-svg', () => import('./icon-svg/index.vue'))
+Vue.component('scrollbar', () => import('./scrollbar'))

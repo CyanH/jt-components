@@ -1,0 +1,79 @@
+import request from '@/utils/request'
+import qs from 'qs'
+
+export function add(data) {
+  return request({
+    url: 'api/plantSyBatch',
+    method: 'post',
+    data
+  })
+}
+
+export function del(ids) {
+  return request({
+    url: 'api/plantSyBatch/',
+    method: 'delete',
+    data: ids
+  })
+}
+
+export function edit(data) {
+  return request({
+    url: 'api/plantSyBatch',
+    method: 'put',
+    data
+  })
+}
+
+export function numberList(params) {
+  return request({
+    url: 'api/plantSyBatch?' + qs.stringify(params, { indices: false }),
+    method: 'get'
+  })
+}
+export function getByProductCode(params) {
+  return request({
+    url: 'api/plantSyBatch/getByProductCode?' + qs.stringify(params, { indices: false }),
+    method: 'get'
+  })
+}
+
+export function getDictionary(params) {
+  return request({
+    url: 'api/plantSyBatch/dictionary?' + qs.stringify(params, { indices: false }),
+    method: 'get'
+  })
+}
+
+export function dictIdAdd(params) {
+  return request({
+    url: 'api/plantSyBatch/dictIdAdd?' + qs.stringify(params, { indices: false }),
+    method: 'get'
+  })
+}
+
+export function getByBatchId(params) {
+  return request({
+    url: 'api/plantSyBatch/getByBatchId?' + qs.stringify(params, { indices: false }),
+    method: 'get'
+  })
+}
+
+//根据批次id查询报告类别倒叙最小
+export function getByBatchTypeDesc(params) {
+  return request({
+    url: 'api/plantSyBatch/getByBatchTypeDesc?' + qs.stringify(params, { indices: false }),
+    method: 'get'
+  })
+}
+
+//根据状态批次ID和报告类别查询批次图片
+export function getByTypeAndId(params) {
+  return request({
+    url: 'api/plantSyBatch/getByTypeAndId?' + qs.stringify(params, { indices: false }),
+    method: 'get'
+  })
+}
+
+export default { add, edit, del, getByProductCode, numberList, getDictionary, dictIdAdd, getByBatchId, getByBatchTypeDesc, getByTypeAndId }
+

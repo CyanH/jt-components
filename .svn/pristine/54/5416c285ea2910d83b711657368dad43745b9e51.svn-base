@@ -1,0 +1,39 @@
+<template>
+  <div class="page container-component">
+    <div class="container-full">
+      <div class="container-full__body">
+        <div ref="body" class="container-content">
+          <el-table :data="list" style="width:500px" :max-height="tableHeight">
+            <el-table-column prop="address" label="正常按钮" align="center">
+              <template slot-scope="scope">
+                <el-button v-if="scope.row.name!=='more'" :type="scope.row.name">按钮</el-button>
+                <el-button v-else :type="scope.row.name" icon="el-icon-alimore" />
+              </template>
+            </el-table-column>
+            <el-table-column prop="address" label="禁用按钮" align="center">
+              <template slot-scope="scope">
+                <el-button v-if="scope.row.name!=='more'" disabled :type="scope.row.name">按钮</el-button>
+              </template>
+            </el-table-column>
+            <el-table-column prop="name" label="type" align="center" />
+
+          </el-table>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+export default {
+  data() {
+    return {
+      list: [{ name: 'primary' }, { name: 'success ' }, { name: 'warning' }, { name: 'danger' }, { name: 'info' }, { name: 'text' }, { name: '' }, { name: 'add' }, { name: 'edit' }, { name: 'del' }, { name: 'export' }, { name: 'search' }, { name: 'reset' }, { name: 'more' }],
+      tableHeight: null
+    }
+  },
+  mounted() {
+    this.tableHeight = this.$refs.body.offsetHeight - 40
+  }
+}
+</script>

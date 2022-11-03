@@ -1,0 +1,236 @@
+<template>
+  <div class="page container-component">
+    <div class="container-full">
+      <div class="container-full__body">
+        <div ref="body" class="container-content">
+          <!--工具栏-->
+          <div class="head-container">
+            <!--如果想在工具栏加入更多按钮，可以使用插槽方式， slot = 'left' or 'right'-->
+              <crudOperation :permission="permission" @choose="handleChoose">
+              <template slot="right">
+                <!-- 搜索 -->
+                 <el-input v-model="query.productName" prefix-icon="el-icon-alisearch" clearable placeholder="输入产品名称搜索" style="width: 180px;" class="filter-item" @keyup.enter.native="crud.toQuery" />
+              </template>
+            </crudOperation>
+            <!--编辑表单组件-->
+            <el-dialog :fullscreen="fullscreen" :close-on-click-modal="false" :before-close="handleClose" :visible="crud.status.cu > 0" width="980px">
+              <div slot="title" class="el-dialog__title">
+                <span>{{ crud.status.title }}</span>
+                <el-button class="dialog-fullscreen" :icon="fullscreen? 'el-icon-aliexitfullscreen':'el-icon-alifullscreen'" type="text" @click="fullscreen = !fullscreen" />
+              </div>
+
+              <el-form ref="form" :model="form" :rules="rules" label-width="115px">
+                <el-row>
+                  <el-col :span="8">
+                    <el-form-item label="产品" prop="productId">
+                      <el-select v-model="form.productId" placeholder="请选择" @change="breedChange(form.productId)">
+                        <el-option
+                          v-for="item in pondList"
+                          :key="item.id"
+                          :label="item.productName"
+                          :value="item.id"
+                        />
+                      </el-select>
+                    </el-form-item>
+                  </el-col>
+                </el-row>
+
+                <el-form-item label="溯源配置项" prop="sypzType">
+                  <el-checkbox v-for="item in dictList" :key="item.value" v-model="form.sypzType" :label="item.value">{{ item.label }}</el-checkbox>
+                </el-form-item>
+
+                <div>
+                  <el-form-item label="备注">
+                    <el-input v-model="form.info" type="textarea" style="width: 480px;" rows="4" />
+                  </el-form-item>
+                </div>
+              </el-form>
+              <div slot="footer" class="dialog-footer">
+                <el-button :loading="crud.status.cu === 2" type="primary" @click="crud.submitCU">确认</el-button>
+                <el-button @click="crud.cancelCU">取消</el-button>
+              </div>
+            </el-dialog>
+          </div>
+
+          <!--列表渲染-->
+          <div v-show="chooseType === 'card'" class="cardFlex">
+            <el-card v-for="(item, index) in crud.data" :key="index" shadow="hover" class="card" @click.native="crud.toView(item)">
+              <span @click.stop>
+                <el-dropdown trigger="click" placement="bottom" class="card-more" @command="handleCommand">
+                  <span class="el-dropdown-link">
+                    <el-button slot="reference" icon="el-icon-alimore" type="more" />
+                  </span>
+                  <el-dropdown-menu slot="dropdown">
+                    <el-dropdown-item v-permission="['admin', 'plantSypz:edit']" icon="el-icon-aliedit" :command="{ name: 'edit', value: item }">编辑</el-dropdown-item>
+                    <el-dropdown-item v-permission="['admin', 'plantSypz:del']" icon="el-icon-alidel" :command="{ name: 'del', value: item }">删除</el-dropdown-item>
+                  </el-dropdown-menu>
+                </el-dropdown>
+              </span>
+
+              <div class="wrap"><span class="tip">产品:</span>{{ item.productName }}</div>
+              <div class="wrap"><span class="tip">溯源环节：</span>{{ item.sypzhj?item.sypzhj.join(','): '' }}</div>
+              <div class="wrap"><span class="tip">操作时间：</span>{{ item.updateTimeStr }}</div>
+
+            </el-card>
+          </div>
+          <!--表格渲染-->
+          <el-table v-show="chooseType === 'list'" ref="table" v-loading="crud.loading" :max-height="tableHeight" :data="crud.data" style="width: 100%;" @selection-change="crud.selectionChangeHandler" stripe>
+            <el-table-column type="selection" width="55" />
+            <el-table-column prop="productName" label="产品名称:" />
+            <el-table-column prop="sypzhj" label="溯源环节：">
+                <template slot-scope="scope">
+                    <span>{{ scope.row.sypzhj?scope.row.sypzhj.join(','): '' }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="updateTimeStr" label="操作时间" sortable />
+            <el-table-column v-if="checkPer(['admin','plantSypz:edit','plantSypz:del'])" label="操作" width="260px" align="center">
+              <template slot-scope="scope">
+                <udOperation
+                  :data="scope.row"
+                  :permission="permission"
+                />
+              </template>
+            </el-table-column>
+          </el-table>
+          <!--分页组件-->
+          <pagination />
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import { mapGetters } from 'vuex'
+import { getToken } from '@/utils/auth'
+import { getProduct } from '@/api/source/plantSyProduct'
+import { getSypzDetail, getSyhjByProductId } from '@/api/source/plantSypz'
+import crudFarmSypz from '@/api/source/plantSypz'
+import CRUD, { presenter, header, form, crud } from '@crud/crud'
+import crudOperation from '@crud/CRUD.operation'
+import udOperation from '@crud/UD.operation'
+import pagination from '@crud/Pagination'
+
+const defaultForm = { id: null, productId: null, productCode: null,productName: null,sypzType:[],sypzhj: [],info: null, ord: null, createBy: null, createTime: null, updateTime: null, updateBy: null, updateTimeStr: null }
+let imageArr = []
+export default {
+  name: 'PlantSypz',
+  components: { pagination, crudOperation, udOperation },
+  mixins: [presenter(), header(), form(defaultForm), crud()],
+  cruds() {
+    return CRUD({ title: '溯源配置', url: 'api/plantSypz', idField: 'id', sort: 'date,desc', crudMethod: { ...crudFarmSypz }})
+  },
+  data() {
+    return {
+      permission: {
+        view: ['admin', 'plantSypz:view'],
+        add: ['admin', 'plantSypz:add'],
+        edit: ['admin', 'plantSypz:edit'],
+        del: ['admin', 'plantSypz:del']
+      },
+      headers: {
+        Authorization: getToken()
+      },
+
+      rules: {
+        productId: [{ required: true, message: '请选择产品', trigger: 'change' }],
+        sypzType: [{ required: true, message: '请选择溯源配置项', trigger: 'blur' }]
+      },
+      typeList: [],
+      dictList: [],
+      pondList: [],
+      chooseType: 'list',
+      fullscreenView: false,
+      fullscreen: false,
+      tableHeight: null,
+      fileList: [],
+      srcList: [],
+      no: '',
+    }
+  },
+  computed: {
+    ...mapGetters(['baseApi'])
+  },
+  mounted() {
+    this.tableHeight = this.$refs.body.offsetHeight - 96
+    this.getData()
+  },
+  methods: {
+  //  [CRUD.HOOK.beforeToAdd](){
+  //    this.form.jLName = this.form.jLName[0]
+  //  },
+    clearImage() {
+      imageArr = []
+      this.fileList = []
+    },
+    getData() {
+      getProduct().then(res => {
+        this.pondList = res.content
+      })
+      getSypzDetail({ dictName: 'plant_sy_type' }).then(res => {
+        this.dictList = res
+      })
+    },
+    handleChange(value) {
+    },
+    handleAvatarSuccess(res, file) {
+      imageArr.push(res)
+      this.form.picAddress = imageArr.join(',')
+    },
+    handleRemove(file, fileList) {
+      imageArr = []
+      fileList.map(it => {
+        imageArr.push(it.response)
+      })
+      this.form.picAddress = imageArr.join(',')
+    },
+    beforeAvatarUpload(file) {
+      const isJPG = file.type.indexOf('image') !== -1
+      if (!isJPG) {
+        this.$message.error('请上传图片！')
+      }
+      return isJPG
+    },
+    handleCommand(command) {
+      if (command.name === 'view') {
+        this.crud.toView(command.value)
+      } else if (command.name === 'edit') {
+        this.crud.toEdit(command.value)
+      } else if (command.name === 'del') {
+        this.$confirm('确定删除该条记录吗？', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(() => {
+          this.crud.doDelete(command.value)
+        })
+      }
+    },
+    handleChoose(value) {
+      this.chooseType = value
+    },
+    handleClose() {
+      this.clearImage()
+      this.crud.cancelCU()
+    },
+    breedChange(data){
+
+        this.pondList.map(item => {
+        if (item.id === data) {
+          this.form.productName = item.productName
+          this.form.productCode = item.productCode
+        }
+      })
+
+        this.typeList = []
+
+    //   getSyhjByProductId({productId:data}).then(res => {
+    //     for(var i = 0; i < res.length; i++){
+    //         this.typeList.push({plantSypzDetailId:res[i].id,plantSyName:res[i].name})
+    //     } 
+    //   })
+    }
+  }
+}
+</script>
+

@@ -1,0 +1,241 @@
+<template>
+  <el-dialog title="新增批次" :close-on-click-modal="false" :before-close="handleClose" :visible="dialogVisible" width="980px">
+    <el-form ref="form" :inline="true" :model="form" :rules="rules" label-width="115px">
+      <el-form-item label="产 品" prop="productId">
+        <el-input v-model="form.productName" readonly style="width: 180px;" />
+      </el-form-item>
+      <el-form-item label="品 种" prop="plantBreedName">
+        <el-input v-model="form.plantBreedName" readonly style="width: 180px;" />
+      </el-form-item>
+      <el-form-item label="地 块" prop="plantMassifName">
+        <el-select v-model="form.plantMassifName" placeholder="请选择" style="width: 180px;" @change="handleChange">
+          <el-option v-for="item in pondList" :key="item.id" :label="item.plantMassifName" :value="item.plantMassifName" />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="批次编号" prop="batchNo">
+        <el-input v-model="form.batchNo" readonly style="width: 180px;" />
+      </el-form-item>
+      <el-form-item label="规格(箱)" prop="spec">
+        <el-input v-model="form.spec" onkeyup="value=value.match(/\d+\.?\d{0,0}/)" style="width: 180px;" />
+      </el-form-item>
+      <el-form-item label="数 量" prop="amount">
+        <el-input v-model="form.amount" onkeyup="value=value.match(/\d+\.?\d{0,0}/)" style="width: 180px;" />
+      </el-form-item>
+      <el-form-item label="价格(元)" prop="price">
+        <el-input v-model="form.price" onkeyup="value=value.match(/\d+\.?\d{0,2}/)" style="width: 180px;" />
+      </el-form-item>
+      <el-form-item label="生产日期" prop="productionDate">
+        <el-date-picker v-model="form.productionDate" value-format="yyyy-MM-dd" type="date" placeholder="选择日期" style="width: 180px;" />
+      </el-form-item>
+      <el-form-item label="保质期(天)" prop="expirationDate">
+        <el-input v-model="form.expirationDate" onkeyup="value=value.match(/\d+\.?\d{0,0}/)" style="width: 180px;" />
+      </el-form-item>
+      <el-form-item label="溯源码数量" prop="syCodeAmount">
+        <el-input v-model="form.syCodeAmount" onkeyup="value=value.match(/\d+\.?\d{0,0}/)" style="width: 180px;" />
+      </el-form-item>
+      <el-form-item label="采集开始时间" prop="pickStartDate">
+        <el-date-picker v-model="form.pickStartDate" value-format="yyyy-MM-dd" type="date" placeholder="选择日期" style="width: 180px;" />
+      </el-form-item>
+
+      <el-form-item label="采集结束时间" prop="pickEndDate">
+        <el-date-picker v-model="form.pickEndDate" value-format="yyyy-MM-dd" type="date" placeholder="选择日期" style="width: 180px;" />
+      </el-form-item>
+      <el-button style="float:right; margin-right:15px" size="mini" @click="custom">自定义报告类别</el-button>
+      <div>
+        <el-radio-group v-model="radioVal" style="margin-left:50px" @change="agreeChange">
+          <el-radio-button v-for="item in dictList" :key="item.id" type="success" style="margin-top:10px" :label="item.value" plain>{{ item.label }}</el-radio-button>
+        </el-radio-group>
+      </div>
+      <br>
+      <div v-if="visibleCancel">
+        <el-form-item style="margin-left:50px" prop="reportType">
+          <el-input v-model="form.dictLabel" placeholder="请输入自定义类别名称" style="width: 180px;" />
+        </el-form-item>
+        <el-button type="primary" @click="subDict">新增</el-button>
+      </div>
+
+      <div style="padding-left:65px">
+        <el-upload
+          list-type="picture-card"
+          name="filename"
+          :headers="headers"
+          accept=".jpg,.jpeg,.png,.gif,.bmp,.JPG,.JPEG,.PBG,.GIF,.BMP"
+          :action="baseApi+ '/api/plantBreed/uploading'"
+          :on-success="handleAvatarSuccess"
+          :on-remove="handleRemove"
+          :file-list="fileList"
+          :before-upload="beforeAvatarUpload"
+        >
+          <i class="el-icon-plus" />
+        </el-upload>
+      </div>
+
+    </el-form>
+    <div slot="footer" class="dialog-footer">
+      <el-button @click="handleClose">取消</el-button>
+      <el-button type="primary" @click="batchSub">确认</el-button>
+    </div>
+  </el-dialog>
+</template>
+
+<script>
+import { mapGetters } from 'vuex'
+import { getToken } from '@/utils/auth'
+
+import crudPlantSyBatch from '@/api/source/plantSyBatch'
+import { getDictionary, getByProductCode, dictIdAdd, getByTypeAndId, add } from '@/api/source/plantSyBatch'
+import { getByPlantBreedId } from '@/api/wisdom/plantManagement'
+
+import imgUpload from '@/components/imgUpload'
+
+let imageArr = []
+const temporary = []
+export default {
+  components: {
+    imgUpload
+  },
+
+  data() {
+    return {
+      dialogVisible: false,
+      form: {},
+      pondList: [],
+      dictList: [],
+
+      headers: {
+        Authorization: getToken()
+      },
+
+      rules: {
+        productId: [{ required: true, message: '请选择产品', trigger: 'change' }],
+        plantMassifName: [{ required: true, message: '请选择地块', trigger: 'change' }],
+        plantBreedName: [{ required: true, message: '请选择品种', trigger: 'change' }],
+        spec: [{ required: true, message: '请输入规格', trigger: 'blur' }],
+        amount: [{ required: true, message: '请输入数量', trigger: 'blur' }],
+        price: [{ required: true, message: '请输入价格', trigger: 'blur' }],
+        productionDate: [{ required: true, message: '请输入生产日期', trigger: 'blur' }],
+        expirationDate: [{ required: true, message: '请输入保质期', trigger: 'blur' }],
+        syCodeAmount: [{ required: true, message: '请输入溯源码数量', trigger: 'blur' }],
+        pickStartDate: [{ required: true, message: '请输入采集开始时间', trigger: 'blur' }],
+        pickEndDate: [{ required: true, message: '请输入采集结束时间', trigger: 'blur' }]
+      },
+
+      radioVal: 0,
+      fileList: [],
+      visibleCancel: false
+    }
+  },
+  computed: {
+    ...mapGetters(['baseApi'])
+  },
+
+  mounted() {
+    this.getData()
+  },
+  methods: {
+    getData() {
+      getDictionary({ dictName: 'plant_report_type' }).then(res => {
+        this.dictList = res
+      })
+    },
+    getMoreData() {
+      getByProductCode({ productCode: this.form.productCode }).then(res => {
+        this.$set(this.form, 'batchNo', res)
+      })
+      getByPlantBreedId({ plantBreedId: this.form.plantBreedId }).then(res => {
+        this.pondList = res
+      })
+    },
+
+    handleChange(value) {
+      this.pondList.map(item => {
+        if (item.plantMassifName === value) {
+          this.form.plantMassifId = item.id
+          this.form.plantMassifCode = item.plantMassifCode
+        }
+      })
+    },
+    // 添加自定义类别字典项
+    subDict() {
+      if (this.form.dictLabel != null) {
+        dictIdAdd({ dictLabel: this.form.dictLabel, dictName: 'plant_report_type' }).then(res => {
+          this.$notify({
+            title: '新增成功',
+            type: 'success'
+          })
+          crudPlantSyBatch.getDictionary({ dictName: 'plant_report_type' }).then(res => {
+            this.dictList = res
+          })
+        })
+      } else {
+        this.dialogVisible = true
+      }
+    },
+    // 添加batchform表单
+    batchSub() {
+      add({ resource: this.form, data: temporary }).then(res => {
+        this.$notify({
+          title: '新增成功',
+          type: 'success'
+        })
+
+        this.handleCloseBatch()
+        this.clearImage()
+      })
+    },
+    agreeChange(val) {
+      var imgList = []
+      getByTypeAndId({ plantSyBatchId: this.form.id, reportType: val }).then(res => {
+        console.log(res)
+        for (var i = 0; i < res.content.length; i++) {
+          if (res.content[i].reportType === val) {
+            this.form.reportType = res.content[i].reportType
+            imgList.push({ url: this.baseApi + '/file' + res.content[i].address, response: res.content[i].address })
+          }
+        }
+        this.fileList = imgList
+      })
+      // 点击已有类别， 隐藏清空自定义类别
+      this.form.reportType = '' // 清空类别下标
+      this.visibleCancel = false // 输入框隐藏
+      this.form.reportType = val
+    },
+    custom() {
+      this.visibleCancel = !this.visibleCancel
+      // 点击自定义类别， 清空已有类别
+      this.form.reportType = ''
+      this.form.radioVal = ''
+    },
+    handleAvatarSuccess(res, file) {
+      imageArr.push(res)
+      var s = imageArr.join()
+      this.form.plantSyProductPic = s
+
+      if (this.form.reportType == null) {
+        this.form.reportType = '0'
+      }
+      temporary.push({ reportType: this.form.reportType, address: this.form.plantSyProductPic })
+      console.log(temporary)
+      imageArr = []
+    },
+    handleRemove(file, feedList) {
+      imageArr = []
+      feedList.map(it => {
+        imageArr.push(it.response)
+      })
+      this.form.plantSyProductPic = imageArr.join(',')
+    },
+    beforeAvatarUpload(file) {
+      const isJPG = file.type.indexOf('image') !== -1
+      if (!isJPG) {
+        this.$message.error('请上传图片！')
+      }
+      return isJPG
+    },
+
+    handleClose() {
+      this.dialogVisible = false
+    }
+  }
+}
+</script>

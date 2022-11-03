@@ -1,0 +1,28 @@
+export default {
+  namespaced: true,
+  state: {
+    showPreview: false, // 是否显示图片预览
+    previewSrc: '' // 图片地址
+  },
+
+  mutations: {
+    set(state, active) {
+      state.showPreview = active
+    },
+    setSrc(state, src) {
+      state.previewSrc = src
+    }
+  },
+  actions: {
+    open({ commit }) {
+      commit('set', true)
+    },
+    close({ commit }) {
+      commit('set', false)
+    },
+    setImgSrc({ commit }, src) {
+      commit('setSrc', src)
+    }
+  }
+}
+

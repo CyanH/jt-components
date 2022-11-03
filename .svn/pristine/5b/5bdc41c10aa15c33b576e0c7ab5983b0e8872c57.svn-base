@@ -1,0 +1,158 @@
+<template>
+  <el-dialog :close-on-click-modal="false" :title="crud.status.title" :before-close="crud.cancelCU" :visible="crud.status.cu > 0" width="980px">
+    <el-form ref="form" :inline="true" :model="form" :rules="rules" label-width="115px">
+      <el-form-item label="地块" prop="plantMassifId">
+        <el-select v-model="form.plantMassifId" placeholder="请选择" style="width: 180px;" @change="breedChange(form.plantMassifId)">
+          <el-option v-for="item in pondList" :key="item.id" :label="item.plantMassifName" :value="item.id" />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="采收重量" prop="pickWeight">
+        <el-input v-model="form.pickWeight" onkeyup="value=value.match(/\d+\.?\d{0,2}/)" style="width: 180px;" />
+      </el-form-item>
+      <el-form-item label="采收人" prop="pickPersonId">
+        <!-- <el-select v-model="form.pickPersonName" placeholder="请选择" style="width: 180px;" @change="handleChange">
+          <el-option v-for="item in personList" :key="item.id" :label="item.username" :value="item.id" />
+        </el-select> -->
+      <el-input v-model="form.pickPersonId"   style="width: 180px;"   />
+      </el-form-item>
+      <el-form-item label="采收日期" prop="pickDate">
+        <el-date-picker v-model="form.pickDate" value-format="yyyy-MM-dd" type="date" 
+        placeholder="选择日期" style="width: 180px;"  @change="changePickDate"/>
+      </el-form-item>
+      <br>
+      <el-form-item label="品种" prop="plantBreedIdList">
+        <el-checkbox v-for="item in typeList" :key="item.plantBreedId" v-model="form.plantBreedIdList" :label="item.plantBreedId">{{ item.plantBreedName }}</el-checkbox>
+      </el-form-item>
+      <div style="padding-left:30px">
+        <el-form-item>
+          <el-input v-model="form.info" type="textarea" placeholder="请输入备注内容" style="width: 875px;" rows="4" />
+        </el-form-item>
+      </div>
+      <div style="padding-left:30px">
+        <img-upload ref="upload" @imgUpload="imgUpload" />
+      </div>
+    </el-form>
+    <div slot="footer" class="dialog-footer">
+      <el-button size="mini" @click="crud.cancelCU">取消</el-button>
+      <el-button :loading="crud.status.cu === 2" type="primary" size="mini" @click="crud.submitCU">确认</el-button>
+    </div>
+  </el-dialog>
+</template>
+
+<script>
+import { breedList } from '@/api/wisdom/plantBreed'
+import { massifList } from '@/api/wisdom/plantMassif'
+import { getpickPerson, getPlantBreedByMassif } from '@/api/wisdom/plantFarmWorkRecords'
+
+import imgUpload from '@/components/imgUpload'
+
+import CRUD, { form, crud } from '@crud/crud'
+
+const defaultForm = {
+  id: null, plantMassifId: null, plantMassifCode: null,
+  plantMassifName: null, plantBreedId: null, plantBreedIdList: [],
+  plantBreedCode: null, plantBreedName: null, pickWeight: null,
+  pickPersonId: null, pickPersonName: null, pickDate: null, no: null,
+  info: null, status: null, by1: null, by2: null, createBy: null,
+  createTime: null, updateTime: null, orgCompanyId: null,
+  orgCompanyCode: null, orgCompanyName: null, updateBy: null,
+  plantPickRecordsPic: null, picList: []
+}
+export default {
+  components: {
+    imgUpload
+  },
+  mixins: [form(defaultForm), crud()],
+  data() {
+    return {
+      pondList: [],
+      typeList: [],
+      personList: [],
+      date:null,
+      rules: {
+        plantMassifId: [{ required: true, message: '请选择地块', trigger: 'change' }],
+        plantBreedIdList: [{ required: true, message: '请选择品种', trigger: 'change' }],
+        pickWeight: [{ required: true, message: '请输入采收重量', trigger: 'blur' }],
+        pickPersonName: [{ required: true, message: '请选择采收人', trigger: 'blur' }],
+        pickDate: [{ required: true, message: '请选择采收时间', trigger: 'change' }]
+      }
+    }
+  },
+  mounted() {
+    this.getData()
+  },
+  methods: {
+    [CRUD.HOOK.beforeToCU] (crud, form) {
+      if (form.id) {
+        this.date = form.pickDate
+      } else {
+        this.date = new Date(new Date(new Date().toLocaleDateString()).getTime())
+        form.pickDate = this.date
+      }
+      this.$nextTick(() => {
+        if (this.$refs.upload && this.$refs.upload.length > 0) { this.$refs.upload.pictrueList = [] }
+      })
+      if (form.picList && form.picList.length > 0) {
+        this.form.plantPickRecordsPic = form.picList.map((item) => item).join(',')
+      }
+      this.$nextTick(() => {
+        this.$refs.upload.setValue(form)
+      })
+    },
+    [CRUD.HOOK.beforeToEdit]() {
+      this.form.plantBreedIdList = this.form.plantBreedId.split(',')
+      this.typeList = []
+      getPlantBreedByMassif({ plantMassifId: this.form.plantMassifId }).then(res => {
+        for (var i = 0; i < res.length; i++) {
+          this.typeList.push({ plantBreedId: res[i].id, plantBreedName: res[i].name })
+        }
+      })
+    },
+    [CRUD.HOOK.beforeToAdd]() {
+      this.typeList = []
+    },
+    handleChange(value) {
+      this.personList.map(item => {
+        if (item.id === value) {
+          this.form.pickPersonName = item.username
+        }
+      })
+    },
+    getData() {
+      massifList().then(res => {
+        this.pondList = res.content
+      })
+      breedList().then(res => {
+        this.breedList = res.content
+      })
+      getpickPerson({ workerType: '种植采摘作业人员' }).then(res => {
+        this.personList = res
+      })
+    },
+    imgUpload(val) {
+      console.log(val)
+      this.form.plantPickRecordsPic = val
+    },
+
+    breedChange(data) {
+      this.typeList = []
+      this.form.plantBreedIdList = []
+      this.pondList.map(item => {
+        if (item.id === data) {
+          this.form.plantMassifName = item.plantMassifName
+          this.form.plantMassifCode = item.plantMassifCode
+        }
+      })
+      getPlantBreedByMassif({ plantMassifId: data }).then(res => {
+        for (var i = 0; i < res.length; i++) {
+          this.typeList.push({ plantBreedId: res[i].id, plantBreedName: res[i].name })
+        }
+      })
+    },
+    changePickDate (val) {
+      console.log(val, 'vak在这里')
+      this.form.pickDate = val
+    },
+  }
+}
+</script>

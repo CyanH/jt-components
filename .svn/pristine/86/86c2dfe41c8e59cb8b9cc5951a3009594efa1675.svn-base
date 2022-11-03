@@ -1,0 +1,366 @@
+<template>
+  <div class="page container-component">
+    <div class="container-full">
+      <div class="container-full__body">
+        <div ref="body" class="container-content">
+          <!--工具栏-->
+          <div class="head-container">
+            <div v-if="crud.props.searchToggle">
+              <!-- 搜索 -->
+              <el-input v-model="query.blurry" prefix-icon="el-icon-alisearch" clearable size="small" placeholder="输入菜单标题搜索" style="width: 200px;" class="filter-item" @keyup.enter.native="crud.toQuery" />
+              <date-range-picker v-model="query.updateTime" class="date-item" />
+              <rrOperation />
+            </div>
+            <crudOperation :permission="permission" @choose="handleChoose"  />
+          </div>
+          
+          <!--表单渲染-->
+          <el-dialog :fullscreen="fullscreen"  append-to-body :close-on-click-modal="false" :before-close="crud.cancelCU" :visible="crud.status.cu > 0" width="650px">
+            <div slot="title" class="el-dialog__title">
+              <span>{{ crud.status.title }}</span>
+              <el-button class="dialog-fullscreen" :icon="fullscreen? 'el-icon-aliexitfullscreen':'el-icon-alifullscreen'" type="text" @click="fullscreen = !fullscreen" />
+            </div>
+            <el-form ref="form" :model="form" :rules="rules" size="small" label-width="80px">
+              <el-form-item label="菜单类型" prop="type">
+                <el-radio-group v-model="form.type" size="mini" style="width: 178px">
+                  <el-radio-button label="0">目录</el-radio-button>
+                  <el-radio-button label="1">菜单</el-radio-button>
+                  <el-radio-button label="2">按钮</el-radio-button>
+                </el-radio-group>
+              </el-form-item>
+              <el-form-item v-show="form.type.toString() !== '2'" label="菜单图标">
+                <el-popover
+                  placement="bottom-start"
+                  width="450"
+                  trigger="click"
+                  @show="$refs['iconSelect'].reset()"
+                >
+                  <icon-select ref="iconSelect" @selected="selected" />
+                  <el-input slot="reference" v-model="form.icon" style="width: 450px;" placeholder="点击选择图标" readonly>
+                    <icon-svg v-if="form.icon" slot="prefix" :name="form.icon" class="el-input__icon" style="height: 32px;width: 16px;" />
+                    <i v-else slot="prefix" class="el-icon-search el-input__icon" />
+                  </el-input>
+                </el-popover>
+              </el-form-item>
+              <el-row :gutter="20">
+                <el-col :span="8">
+                  <el-form-item v-show="form.type.toString() !== '2'" label="外链菜单" prop="iframe">
+                    <el-radio-group v-model="form.iframe" size="mini">
+                      <el-radio-button label="true">是</el-radio-button>
+                      <el-radio-button label="false">否</el-radio-button>
+                    </el-radio-group>
+                  </el-form-item>
+                </el-col>
+                <el-col :span="8">
+                  <el-form-item v-show="form.type.toString() === '1'" label="菜单缓存" prop="cache">
+                    <el-radio-group v-model="form.cache" size="mini">
+                      <el-radio-button label="true">是</el-radio-button>
+                      <el-radio-button label="false">否</el-radio-button>
+                    </el-radio-group>
+                  </el-form-item>
+                </el-col>
+                <el-col :span="8">
+                  <el-form-item v-show="form.type.toString() !== '2'" label="菜单可见" prop="hidden">
+                    <el-radio-group v-model="form.hidden" size="mini">
+                      <el-radio-button label="false">是</el-radio-button>
+                      <el-radio-button label="true">否</el-radio-button>
+                    </el-radio-group>
+                  </el-form-item>
+                </el-col>
+              </el-row>
+
+              <el-form-item v-if="form.type.toString() !== '2'" label="菜单标题" prop="title">
+                <el-input v-model="form.title" style="width: 178px" placeholder="菜单标题" />
+              </el-form-item>
+              <el-form-item v-if="form.type.toString() === '2'" label="按钮名称" prop="title">
+                <el-input v-model="form.title" placeholder="按钮名称" style="width: 178px;" />
+              </el-form-item>
+              <el-form-item v-show="form.type.toString() !== '0'" label="权限标识" prop="permission">
+                <el-input v-model="form.permission" :disabled="form.iframe.toString() === 'true'" placeholder="权限标识" style="width: 178px;" />
+              </el-form-item>
+              <el-form-item v-if="form.type.toString() !== '2'" label="路由地址" prop="path">
+                <el-input v-model="form.path" placeholder="路由地址" style="width: 178px;" />
+              </el-form-item>
+              <el-form-item label="菜单排序" prop="menuSort">
+                <el-input-number v-model.number="form.menuSort" :min="0" :max="999" controls-position="right" style="width: 178px;" />
+              </el-form-item>
+
+              <el-row :gutter="20">
+                <el-col :span="12">
+                  <el-form-item v-show="form.iframe.toString() !== 'true' && form.type.toString() === '1'" label="组件名称" prop="componentName">
+                    <el-input v-model="form.componentName" style="width: 178px;" placeholder="匹配组件内Name字段" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item v-show="form.iframe.toString() !== 'true' && form.type.toString() === '1'" label="组件路径" prop="component">
+                    <el-input v-model="form.component" style="width: 178px;" placeholder="组件路径" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+
+              <el-form-item label="上级类目" prop="pid">
+                <treeselect
+                  v-model="form.pid"
+                  :options="menus"
+                  :load-options="loadMenus"
+                  style="width: 450px;"
+                  placeholder="选择上级类目"
+                />
+              </el-form-item>
+            </el-form>
+            <div slot="footer" class="dialog-footer">
+              <el-button :loading="crud.status.cu === 2" type="primary" @click="crud.submitCU">确认</el-button>
+              <el-button @click="crud.cancelCU">取消</el-button>
+            </div>
+          </el-dialog>
+
+          <!--列表渲染-->
+          <div v-show="chooseType === 'card'" class="cardFlex">
+            <el-card v-for="(item, index) in crud.data" :key="index" shadow="hover" class="card" @click.native="crud.toView(item)">
+              <span @click.stop>
+                <el-dropdown trigger="click" placement="bottom" class="card-more" @command="handleCommand">
+                  <span class="el-dropdown-link">
+                    <el-button slot="reference" icon="el-icon-alimore" type="more" />
+                  </span>
+                  <el-dropdown-menu slot="dropdown">
+                    <el-dropdown-item v-permission="['admin', 'produceInspect:edit']" icon="el-icon-aliedit" :command="{ name: 'edit', value: item }">编辑</el-dropdown-item>
+                    <el-dropdown-item v-permission="['admin', 'produceInspect:del']" icon="el-icon-alidel" :command="{ name: 'del', value: item}">删除</el-dropdown-item>
+                  </el-dropdown-menu>
+                </el-dropdown>
+              </span>
+
+              <div class="title">{{ item.title }}</div>
+              <div class="wrap"><span class="tip">权限标识：</span>{{ item.permission }}</div>
+              <div class="wrap"><span class="tip">组件路径：</span>{{ item.component }}</div>
+              <div class="wrap"><span class="tip">操作时间：</span>{{ parseTime(item.updateTime,'{y}-{m}-{d}') }}</div>
+            </el-card>
+          </div>
+          <!--表格渲染-->
+          <el-table
+            v-show="chooseType === 'list'" 
+            ref="table"
+            v-loading="crud.loading"
+            lazy
+            :load="getMenus"
+            :data="crud.data"
+            :tree-props="{children: 'children', hasChildren: 'hasChildren'}"
+            row-key="id"
+            :max-height="tableHeight"
+            @select="crud.selectChange"
+            @select-all="crud.selectAllChange"
+            @selection-change="crud.selectionChangeHandler"
+          >
+            <el-table-column type="selection" width="55" />
+            <el-table-column :show-overflow-tooltip="true" label="菜单标题" width="125px" prop="title" />
+            <el-table-column prop="icon" label="图标" align="center" width="60px">
+              <template slot-scope="scope">
+                <icon-svg :name="scope.row.icon ? scope.row.icon : ''" />
+              </template>
+            </el-table-column>
+            <el-table-column prop="menuSort" align="center" label="排序">
+              <template slot-scope="scope">
+                {{ scope.row.menuSort }}
+              </template>
+            </el-table-column>
+            <el-table-column :show-overflow-tooltip="true" prop="permission" label="权限标识" />
+            <el-table-column :show-overflow-tooltip="true" prop="component" label="组件路径" />
+             <!-- <el-table-column prop="iframe" label="外链" width="75px">
+                <template slot-scope="scope">
+                  <el-tag v-if="scope.row.iframe === 0" type="primary">是</el-tag>
+                  <el-tag v-else type="danger">否</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="cache" label="缓存" width="75px">
+                <template slot-scope="scope">
+                  <el-tag v-if="scope.row.cache === 0" type="primary">是</el-tag>
+                  <el-tag v-else type="danger">否</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="hidden" label="可见" width="75px">
+                <template slot-scope="scope">
+                  <el-tag v-if="scope.row.hidden === 0" type="danger">否</el-tag>
+                  <el-tag v-else type="primary">是</el-tag>
+                </template>
+              </el-table-column> -->
+               <el-table-column prop="iframe" label="外链" width="75px">
+              <template slot-scope="scope">
+                <span v-if="scope.row.iframe">是</span>
+                <span v-else>否</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="cache" label="缓存" width="75px">
+              <template slot-scope="scope">
+                <span v-if="scope.row.cache">是</span>
+                <span v-else>否</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="hidden" label="可见" width="75px">
+              <template slot-scope="scope">
+                <span v-if="scope.row.hidden">否</span>
+                <span v-else>是</span>
+              </template>
+            </el-table-column>
+            <!-- <el-table-column prop="createTime" label="创建日期" width="165px" /> -->
+            <el-table-column prop="updateTime" label="操作时间" width="165px" sortable>
+              <template slot-scope="scope">
+                {{ parseTime(scope.row.updateTime,'{y}-{m}-{d}') }}
+              </template>
+            </el-table-column>
+            <el-table-column v-if="checkPer(['admin','menu:edit','menu:del'])" label="操作" width="180px" align="center" fixed="right">
+              <template slot-scope="scope">
+                <udOperation
+                  :data="scope.row"
+                  :permission="permission"
+                  msg="确定删除吗,如果存在下级节点则一并删除，此操作不能撤销！"
+                />
+              </template>
+            </el-table-column>
+          </el-table>
+
+        </div>
+
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import crudMenu from '@/api/system/menu'
+import IconSelect from '@/components/IconSelect'
+import Treeselect from '@riophae/vue-treeselect'
+import '@riophae/vue-treeselect/dist/vue-treeselect.css'
+import { LOAD_CHILDREN_OPTIONS } from '@riophae/vue-treeselect'
+import CRUD, { presenter, header, form, crud } from '@crud/crud'
+import rrOperation from '@crud/RR.operation'
+import crudOperation from '@crud/CRUD.operation'
+import udOperation from '@crud/UD.operation'
+import DateRangePicker from '@/components/DateRangePicker'
+
+// crud交由presenter持有
+const defaultForm = { id: null, title: null, menuSort: 999, path: null, component: null, componentName: null, iframe: false, roles: [], pid: 0, icon: null, cache: false, hidden: false, type: 0, permission: null }
+export default {
+  name: 'Menu',
+  components: { Treeselect, IconSelect, crudOperation, rrOperation, udOperation, DateRangePicker },
+  cruds() {
+    return CRUD({ title: '菜单', url: 'api/menus', crudMethod: { ...crudMenu }})
+  },
+  mixins: [presenter(), header(), form(defaultForm), crud()],
+  data() {
+    return {
+      menus: [],
+      permission: {
+        add: ['admin', 'menu:add'],
+        edit: ['admin', 'menu:edit'],
+        del: ['admin', 'menu:del']
+      },
+      rules: {
+        title: [
+          { required: true, message: '请输入标题', trigger: 'blur' }
+        ],
+        path: [
+          { required: true, message: '请输入地址', trigger: 'blur' }
+        ],
+        icon: [
+          { required: true, message: '请输入地址', trigger: 'blur' }
+        ],
+        iframe: [
+          { required: true, message: '请输入地址', trigger: 'blur' }
+        ],
+        hidden: [
+          { required: true, message: '请输入地址', trigger: 'blur' }
+        ],
+        menuSort: [
+          { required: true, message: '请输入地址', trigger: 'blur' }
+        ],
+        pid: [
+          { required: true, message: '请输入地址', trigger: 'blur' }
+        ]
+      },
+      chooseType: 'list',
+      tableHeight: null,
+      fullscreen: false
+    }
+  },
+  mounted() {
+    this.tableHeight = this.$refs.body.offsetHeight - 158
+  },
+  methods: {
+    // 新增与编辑前做的操作
+    [CRUD.HOOK.afterToCU](crud, form) {
+      this.menus = []
+      if (form.id != null) {
+        if (form.pid === null) {
+          form.pid = 0
+        }
+        this.getSupDepts(form.id)
+      } else {
+        this.menus.push({ id: 0, label: '顶级类目', children: null })
+      }
+    },
+    getMenus(tree, treeNode, resolve) {
+      const params = { pid: tree.id }
+      setTimeout(() => {
+        crudMenu.getMenus(params).then(res => {
+          resolve(res.content)
+        })
+      }, 100)
+    },
+    getSupDepts(id) {
+      crudMenu.getMenuSuperior(id).then(res => {
+        const children = res.map(function(obj) {
+          if (!obj.leaf && !obj.children) {
+            obj.children = null
+          }
+          return obj
+        })
+        this.menus = [{ id: 0, label: '顶级类目', children: children }]
+      })
+    },
+    loadMenus({ action, parentNode, callback }) {
+      if (action === LOAD_CHILDREN_OPTIONS) {
+        crudMenu.getMenusTree(parentNode.id).then(res => {
+          parentNode.children = res.map(function(obj) {
+            if (!obj.leaf) {
+              obj.children = null
+            }
+            return obj
+          })
+          setTimeout(() => {
+            callback()
+          }, 100)
+        })
+      }
+    },
+    // 选中图标
+    selected(name) {
+      this.form.icon = name
+    },
+    handleChoose(value) {
+      this.chooseType = value
+    },
+    handleCommand(command) {
+      if (command.name === 'edit') {
+        this.crud.toEdit(command.value)
+      } else if (command.name === 'del') {
+        this.$confirm('确定删除该条记录吗？', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(() => {
+          this.crud.doDelete(command.value)
+        })
+      }
+    },
+  }
+}
+</script>
+
+<style rel="stylesheet/scss" lang="scss" scoped>
+ ::v-deep .el-input-number .el-input__inner {
+    text-align: left;
+  }
+ ::v-deep .vue-treeselect__control,::v-deep .vue-treeselect__placeholder,::v-deep .vue-treeselect__single-value {
+    height: 40px;
+    line-height: 40px;
+  }
+</style>

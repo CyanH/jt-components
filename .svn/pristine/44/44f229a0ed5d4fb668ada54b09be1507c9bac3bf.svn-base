@@ -1,0 +1,119 @@
+var QQV = (rule, value, callback) => {
+    if (value === '') {
+        callback(new Error('输入QQ号'))
+    } else if (/^[1-9][0-9]{4,10}$/.test(value)) {
+        callback()
+    } else {
+        callback(new Error('输入正确的QQ号'))
+    }
+}
+
+// 类似金钱,首位不为0,最多2位小数
+export function checkNumPot2(rule, value, callback) {
+    const reg = /(^[1-9]([0-9]+)?(\.[0-9]{1,2})?$)|(^(0){1}$)|(^[0-9]\.[0-9]([0-9])?$)/
+    if (!value) {
+        return callback(new Error('请填写数字'))
+    } else if (!reg.test(value)) {
+        return callback(new Error('请填写数字,最多2位小数'))
+    } else {
+        callback()
+    }
+}
+
+// 身份证
+export function checkIdNum(rule, value, callback) {
+    const reg = /(^\d{15}$)|(^\d{18}$)|(^\d{17}(\d|X|x)$)/
+    if (!value) {
+        return callback(new Error('输入身份证号'))
+    } else if (!reg.test(value)) {
+        return callback(new Error('请输入正确的身份证号'))
+    } else {
+        callback()
+    }
+}
+
+// 整数
+export function checkInterNum(rule, value, callback) {
+    const reg = /^[0-9]*[1-9][0-9]*$/
+    if (!value) {
+        return callback(new Error('请填写整数'))
+    } else if (!reg.test(value)) {
+        return callback(new Error('请输入整数'))
+    } else {
+        callback()
+    }
+}
+
+
+
+//验证数字类
+
+//验证整数
+
+//验证自然数
+
+//验证浮点数
+
+//验证坐标
+
+//验证负数
+
+
+
+//验证字符
+
+//验证手机号码
+/**
+ * @param {string} phone
+ * @returns {Boolean}
+ */
+export function isPhone(phone) {
+    // const reg = /^1\d{10}$/
+    const reg = /^1[3|4|5|6|7|8|9]\d{9}$/
+    return reg.test(phone)
+}
+//验证url
+
+//验证email
+/**
+ * @param {string} email
+ * @returns {Boolean}
+ */
+export function validEmail(email) {
+    const reg = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
+    return reg.test(email)
+}
+//验证身份证号
+
+//验证只能是汉字
+
+//验证只能是数字
+
+//验证只能是英文字母
+
+//只能是英文字母和数字
+
+//验证数组中所有的值都是url
+const urlArray = { type: 'array', defaultField: { type: 'url' } }
+//验证对象中的所有属性值都是字符
+const stringObject = { type: 'object', defaultField: { type: 'string' } }
+
+/**
+ *
+ * @param rule 源描述符中与待验证字段名称相对应的验证规则。总是为它分配一个field属性，其中包含要验证的字段
+ * @param value 正在验证的源对象属性的值
+ * @param callback 验证完成后要调用的回调函数。它期望传递一个Error实例数组以指示验证失败。如果检查是同步的，则可以直接返回false或Error或Error Array
+ * @param source 传递给validate方法的源对象
+ * @param options 其他选项  options.messages：包含验证错误消息的对象将与defaultMessages进行深度合并
+ */
+//function a (rule, value, callback, source, options){}
+
+
+
+
+export default {
+    QQ: [{ required: true, validator: QQV, trigger: 'blur' }],
+    phone: [{ required: true, pattern: /^1[34578]\d{9}$/, message: '目前只支持中国大陆的手机号码', trigger: 'blur' }],
+    numPot2: [{ required: true, validator: checkNumPot2, trigger: 'blur' }],
+    InterNum: [{ required: true, validator: checkInterNum, trigger: 'blur' }]
+}

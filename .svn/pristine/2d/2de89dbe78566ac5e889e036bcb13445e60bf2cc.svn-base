@@ -1,0 +1,37 @@
+// Vue
+import Vue from 'vue'
+import App from './App'
+// 核心插件
+import d2Admin from '@/plugin/d2admin'
+// store
+import store from './store'
+
+// 菜单和路由设置
+import router from './router'
+// 核心插件
+Vue.use(d2Admin)
+new Vue({
+  router,
+  store,
+  watch: {
+    // 检测路由变化切换侧边栏内容
+    '$route.matched': {
+      handler(matched) {
+        if (matched.length > 0) {
+          const _side = store.getters.menuHeader.filter(menu => menu.path === matched[0].path)
+          this.$store.commit('menu/asideSet', _side.length > 0 && _side[0].children ? _side[0].children : [])
+        }
+      },
+      immediate: true
+    }
+  },
+  mounted() {
+    // 展示系统信息
+    this.$store.commit('releases/versionShow')
+    // 用户登录后从数据库加载一系列的设置
+    this.$store.dispatch('account/load')
+    // 初始化全屏监听
+    this.$store.dispatch('fullscreen/listen')
+  },
+  render: h => h(App)
+}).$mount('#app')

@@ -1,0 +1,14 @@
+NODE_ENV = development
+
+# 页面 title 前缀
+VUE_APP_TITLE=“数字毛竹”信息化平台
+
+# 接口地址
+VUE_APP_BASE_API  = 'http://10.10.13.58:8002/mz'
+VUE_APP_WS_API = 'ws://http://10.12.0.104:8002'
+
+
+# element 颜色
+VUE_APP_ELEMENT_COLOR=#24C139
+
+BASE_URL = 'http://10.12.0.104:8002'

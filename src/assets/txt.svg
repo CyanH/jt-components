@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="91px" height="90px" viewBox="0 0 91 90" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>txt</title>
+    <defs>
+        <filter x="-2.7%" y="-3.4%" width="105.3%" height="106.9%" filterUnits="objectBoundingBox" id="filter-1">
+            <feOffset dx="0" dy="2" in="SourceAlpha" result="shadowOffsetOuter1"></feOffset>
+            <feMorphology radius="1" operator="erode" in="SourceAlpha" result="shadowInner"></feMorphology>
+            <feOffset dx="0" dy="2" in="shadowInner" result="shadowInner"></feOffset>
+            <feComposite in="shadowOffsetOuter1" in2="shadowInner" operator="out" result="shadowOffsetOuter1"></feComposite>
+            <feGaussianBlur stdDeviation="4" in="shadowOffsetOuter1" result="shadowBlurOuter1"></feGaussianBlur>
+            <feColorMatrix values="0 0 0 0 0   0 0 0 0 0   0 0 0 0 0  0 0 0 0.15 0" type="matrix" in="shadowBlurOuter1" result="shadowMatrixOuter1"></feColorMatrix>
+            <feMerge>
+                <feMergeNode in="shadowMatrixOuter1"></feMergeNode>
+                <feMergeNode in="SourceGraphic"></feMergeNode>
+            </feMerge>
+        </filter>
+    </defs>
+    <g id="数字毛竹信息平台" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="种植生产-种植品种管理弹窗-2" transform="translate(-1220.000000, -595.000000)" fill-rule="nonzero">
+            <g id="编组-5备份" filter="url(#filter-1)" transform="translate(588.000000, 202.000000)">
+                <g id="编组-19" transform="translate(64.000000, 80.000000)">
+                    <g id="txt" transform="translate(583.500000, 328.000000)">
+                        <rect id="矩形" fill="#000000" opacity="0" x="0" y="0" width="60" height="60"></rect>
+                        <path d="M10.4736328,3.75 C9.81776563,3.75 9.11854687,4.01220703 8.63818359,4.53662109 C8.15712109,5.06103516 7.8515625,5.71690234 7.8515625,6.37207031 L7.8515625,53.5693359 C7.8515625,54.2252031 8.11376953,54.9244219 8.63818359,55.4047852 C9.16259766,55.9291992 9.81846484,56.1914062 10.4736328,56.1914062 L48.9306641,56.1914062 C49.5865313,56.1914062 50.28575,55.9291992 50.7661133,55.4047852 C51.2905273,54.8803711 51.5527344,54.2245039 51.5527344,53.5693359 L51.5527344,18.6083984 L36.6943359,3.75 L10.4736328,3.75 Z" id="路径" fill="#55BAFF"></path>
+                        <path d="M51.5332031,18.6083984 L39.296875,18.6083984 C38.6410078,18.6083984 37.9417891,18.3461914 37.4614258,17.8217773 C36.9370117,17.3407148 36.6748047,16.6414961 36.6748047,15.9863281 L36.6748047,3.75 L51.5332031,18.6083984 Z" id="路径" fill="#9CD3F9"></path>
+                        <path d="M21.2881484,39.7850625 L21.2881484,30.7830625 L24.8161484,30.7830625 L24.8161484,29.7890625 L16.6261484,29.7890625 L16.6261484,30.7830625 L20.1541484,30.7830625 L20.1541484,39.7850625 L21.2881484,39.7850625 Z M26.5381484,39.7850625 L29.5061484,35.5010625 L32.4881484,39.7850625 L33.9021484,39.7850625 L30.1921484,34.5910625 L33.6361484,29.7890625 L32.2221484,29.7890625 L29.5061484,33.6810625 L26.8041484,29.7890625 L25.3901484,29.7890625 L28.8061484,34.5910625 L25.1241484,39.7850625 L26.5381484,39.7850625 Z M38.8721484,39.7850625 L38.8721484,30.7830625 L42.4001484,30.7830625 L42.4001484,29.7890625 L34.2101484,29.7890625 L34.2101484,30.7830625 L37.7381484,30.7830625 L37.7381484,39.7850625 L38.8721484,39.7850625 Z" id="TXT" fill="#FFFFFF"></path>
+                    </g>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>

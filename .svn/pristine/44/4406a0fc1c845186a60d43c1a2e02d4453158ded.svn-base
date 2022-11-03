@@ -1,0 +1,57 @@
+<template>
+  <el-dialog :title="crud.status.title" class="view-dialog" :close-on-click-modal="false" :before-close="crud.closeView" :visible="crud.status.view" width="960px">
+    <el-form ref="form" :inline="true" :model="form" label-width="120px">
+      <el-form-item label="名称">
+        <div style="width: 160px;">{{ form.name }}</div>
+      </el-form-item>
+      <el-form-item label="检测类型">
+        <div style="width: 160px;">{{ form.type === 0? '自检': '第三方权威机构' }}</div>
+      </el-form-item>
+      <el-form-item label="检测机构">
+        <div style="width: 160px;">{{ form.detectionOrganization }}</div>
+      </el-form-item>
+      <el-form-item label="检测标准">
+        <div style="width: 160px;">{{ form.detectionCriterion }}</div>
+      </el-form-item>
+      <el-form-item label="检测时间">
+        <div style="width: 160px;">{{ parseTime(form.detectionDate,'{y}-{m}-{d}') }}</div>
+      </el-form-item>
+      <el-form-item label="检测结果">
+        <div style="width: 160px;">{{ form.detectionRes === 0 ? '合格': '不合格 ' }}</div>
+      </el-form-item>
+      <el-form-item label="产品">
+        <div style="width: 160px;">{{ form.productName }}</div>
+      </el-form-item>
+      <div>
+        <el-form-item label="检测结论">
+          <div style="width: 160px;">{{ form.info }}</div>
+        </el-form-item>
+      </div>
+      <div>
+        <img-view ref="view" /> </div>
+    </el-form>
+  </el-dialog>
+</template>
+
+<script>
+import { parseTime } from '@/utils/index'
+import imgView from '@/components/imgView'
+import CRUD, { form, crud } from '@crud/crud'
+export default {
+  components: {
+    imgView
+  },
+  mixins: [form({}), crud()],
+  methods: {
+    [CRUD.HOOK.beforeToView](crud, form) {
+      this.$nextTick(() => {
+        if (this.$refs.view && this.$refs.view.length > 0) { this.$refs.view.pictrueList = [] }
+      })
+      this.$nextTick(() => {
+        this.$refs.view.setValue(form)
+      })
+    },
+    parseTime
+  }
+}
+</script>

@@ -1,0 +1,43 @@
+import request from '@/utils/request'
+import qs from 'qs'
+
+export function add(data) {
+  return request({
+    url: 'api/plantBase',
+    method: 'post',
+    data
+  })
+}
+
+export function del(ids) {
+  return request({
+    url: 'api/plantBase/',
+    method: 'delete',
+    data: ids
+  })
+}
+
+export function edit(data) {
+  return request({
+    url: 'api/plantBase',
+    method: 'put',
+    data
+  })
+}
+
+
+export function getSelect() {
+  return request({
+    url: 'api/plantBase',
+    method: 'get'
+  })
+}
+
+export function getBaseType(params) {
+    return request({
+      url: 'api/plantBase/getBaseType?' + qs.stringify(params, { indices: false }),
+      method: 'get'
+    })
+  }
+
+export default { add, edit, del, getBaseType, getSelect }

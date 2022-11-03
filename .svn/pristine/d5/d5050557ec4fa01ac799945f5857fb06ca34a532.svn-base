@@ -1,0 +1,205 @@
+const CompressionWebpackPlugin = require('compression-webpack-plugin')
+const VueFilenameInjector = require('@d2-projects/vue-filename-injector')
+const ThemeColorReplacer = require('webpack-theme-color-replacer')
+const forElementUI = require('webpack-theme-color-replacer/forElementUI')
+const { each, keys } = require('lodash')
+
+const resolve = dir => require('path').join(__dirname, dir)
+
+// Add environment variable
+process.env.VUE_APP_VERSION = require('./package.json').version
+
+// Build configuration for multiple pages
+const pages = {
+  index: {
+    entry: 'src/main.js',
+    template: 'public/index.html',
+    filename: 'index.html',
+    chunks: [
+      'manifest',
+      'index',
+      'chunk-index',
+      'chunk-vendor',
+      'chunk-common',
+      'chunk-vue',
+      'chunk-element'
+    ]
+  }
+}
+
+module.exports = {
+  publicPath: '/jlmz/source/',
+  outputDir: 'dist',
+  assetsDir: 'static',
+  lintOnSave: process.env.NODE_ENV === 'development',
+  devServer: {
+    port: 8042,
+    open: true,
+    overlay: {
+      warnings: false,
+      errors: true
+    },
+    proxy: {
+      '/api': {
+        target: process.env.VUE_APP_BASE_API,
+        changeOrigin: true,
+        pathRewrite: {
+          '^/api': 'api'
+        }
+      },
+      '/auth': {
+        target: process.env.VUE_APP_BASE_API,
+        changeOrigin: true,
+        pathRewrite: {
+          '^/auth': 'auth'
+        }
+      }
+    }
+  },
+  css: {
+    loaderOptions: {
+      sass: {
+        additionalData: '@use "@/assets/style/public.scss" as *;'
+      },
+      less: {
+        lessOptions: {
+          modifyVars: {
+            blue: '#2262AB'
+          }
+        }
+      }
+    }
+  },
+  pages,
+  configureWebpack: {
+    plugins: [
+      // gzip
+      new CompressionWebpackPlugin({
+        filename: '[path].gz[query]',
+        test: new RegExp('\\.(' + ['js', 'css'].join('|') + ')$'),
+        threshold: 10240,
+        minRatio: 0.8,
+        deleteOriginalAssets: false
+      })
+    ]
+
+  },
+  // default: https://github.com/vuejs/vue-cli/tree/dev/packages/%40vue/cli-service/lib/config/base.js
+  chainWebpack: config => {
+    config.optimization.runtimeChunk({
+      name: 'manifest'
+    })
+    config.optimization.splitChunks({
+      cacheGroups: {
+        // External dependencies common to all pages
+        libs: {
+          name: 'chunk-vendor',
+          chunks: 'initial',
+          minChunks: 1,
+          test: /[\\/]node_modules[\\/]/,
+          priority: 1,
+          reuseExistingChunk: true,
+          enforce: true
+        },
+        // Code common to all pages
+        common: {
+          name: 'chunk-common',
+          chunks: 'initial',
+          minChunks: 2,
+          maxInitialRequests: 5,
+          minSize: 0,
+          priority: 2,
+          reuseExistingChunk: true,
+          enforce: true
+        },
+        // External dependencies that are only used by the index page
+        index: {
+          name: 'chunk-index',
+          chunks: 'all',
+          minChunks: 1,
+          test: /[\\/]node_modules[\\/](sortablejs|screenfull|nprogress|fuse\.js|lowdb|shortid)[\\/]/,
+          priority: 3,
+          reuseExistingChunk: true,
+          enforce: true
+        },
+        // Vue family packages
+        vue: {
+          name: 'chunk-vue',
+          test: /[\\/]node_modules[\\/](vue|vue-router|vuex)[\\/]/,
+          chunks: 'all',
+          priority: 3,
+          reuseExistingChunk: true,
+          enforce: true
+        },
+        // only element-ui
+        element: {
+          name: 'chunk-element',
+          test: /[\\/]node_modules[\\/]element-ui[\\/]/,
+          chunks: 'all',
+          priority: 3,
+          reuseExistingChunk: true,
+          enforce: true
+        }
+      }
+    })
+    // Add the CDN settings to the settings of the htmlwebpackplugin plug-in
+    keys(pages).forEach(name => {
+      config.plugin(`html-${name}`).tap(options => {
+        return options
+      })
+    })
+    // Remove prefetch preload settings for lazy load modules
+    each(keys(pages), name => {
+      config.plugins.delete(`prefetch-${name}`)
+      config.plugins.delete(`preload-${name}`)
+    })
+    // webpack-theme-color-replacer
+    config
+      .plugin('theme-color-replacer')
+      .use(ThemeColorReplacer, [{
+        fileName: 'css/theme-colors.[contenthash:8].css',
+        matchColors: [
+          ...forElementUI.getElementUISeries(process.env.VUE_APP_ELEMENT_COLOR) // Element-ui主色系列
+        ],
+        externalCssFiles: ['./node_modules/element-ui/lib/theme-chalk/index.css'], // optional, String or string array. Set external css files (such as cdn css) to extract colors.
+        changeSelector: forElementUI.changeSelector
+      }])
+    config
+      // The development environment sourcemap does not contain column information
+      .when(process.env.NODE_ENV === 'development',
+        config => config.devtool('cheap-source-map')
+      )
+      // Add file name
+      .when(
+        process.env.VUE_APP_SCOURCE_LINK === 'TRUE',
+        config => VueFilenameInjector(config, {
+          propName: process.env.VUE_APP_SOURCE_VIEWER_PROP_NAME
+        })
+      )
+    // svg
+    const svgRule = config.module.rule('svg')
+    svgRule.uses.clear()
+    svgRule
+      .include
+      .add(resolve('src/assets/svg-icons/icons'))
+      .end()
+      .use('svg-sprite-loader')
+      .loader('svg-sprite-loader')
+      .options({
+        symbolId: 'icon-[name]'
+      })
+      .end()
+    // image exclude
+    const imagesRule = config.module.rule('images')
+    imagesRule
+      .test(/\.(png|jpe?g|gif|webp|svg)(\?.*)?$/)
+      .exclude
+      .add(resolve('src/assets/svg-icons/icons'))
+      .end()
+    // set alias
+    config.resolve.alias
+      .set('@crud', resolve('src/components/Crud'))
+  },
+  // 不输出 map 文件
+  productionSourceMap: false
+}

@@ -1,0 +1,61 @@
+<template>
+  <div class="cardFlex">
+    <el-card v-for="(item, index) in crud.data" :key="index" shadow="hover" class="card" @click.native="crud.toView(item)">
+      <span @click.stop>
+        <el-dropdown trigger="click" placement="bottom" class="card-more" @command="handleCommand">
+          <span class="el-dropdown-link">
+            <el-button slot="reference" icon="el-icon-alimore" type="more" />
+          </span>
+          <el-dropdown-menu slot="dropdown">
+            <el-dropdown-item icon="el-icon-alipreview" :command="{ name: 'view', value: item }">查看</el-dropdown-item>
+            <el-dropdown-item v-permission="['admin', 'plantManagement:edit']" icon="el-icon-aliedit" :command="{ name: 'edit', value: item }">编辑</el-dropdown-item>
+            <el-dropdown-item v-permission="['admin', 'plantManagement:del']" icon="el-icon-alidel" :command="{ name: 'del', value: item }">删除</el-dropdown-item>
+            <el-dropdown-item icon="el-icon-alipreview" :disabled="item.status === 1" :command="{ name: 'data', value: item }">结束</el-dropdown-item>
+          </el-dropdown-menu>
+        </el-dropdown>
+      </span>
+
+      <div class="title">{{ item.code }}</div>
+      <div class="wrap"><span class="tip">品种名称：</span>{{ item.plantMassifName }}</div>
+      <div class="wrap"><span class="tip">种植地块：</span>{{ item.plantBreedName }}</div>
+      <div class="wrap"><span class="tip">种植规模：</span>{{ item.plantSize }}</div>
+      <div class="wrap"><span class="tip">生长周期：</span>{{ item.growthCycle }}</div>
+      <div class="wrap"><span class="tip">种植时间：</span>{{ parseTime(item.plantDate,'{y}-{m}-{d}') }}</div>
+    </el-card>
+  </div>
+</template>
+
+<script>
+import { parseTime } from '@/utils/index'
+import crudPlantManagement from '@/api/wisdom/plantManagement'
+export default {
+  props: {
+    crud: Object
+  },
+  methods: {
+    parseTime,
+    handleCommand(command) {
+      if (command.name === 'view') {
+        this.crud.toView(command.value)
+      } else if (command.name === 'edit') {
+        this.crud.toEdit(command.value)
+      } else if (command.name === 'data') {
+        crudPlantManagement.getByIdFinishTime({ id: command.value.id }).then(() => {
+          this.$notify({
+            title: '结束成功',
+            type: 'success'
+          })
+        })
+      } else if (command.name === 'del') {
+        this.$confirm('确定删除该条记录吗？', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(() => {
+          this.crud.doDelete(command.value)
+        })
+      }
+    }
+  }
+}
+</script>

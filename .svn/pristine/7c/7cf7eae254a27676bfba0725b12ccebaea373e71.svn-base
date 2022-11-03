@@ -1,0 +1,346 @@
+<template>
+  <div class="page container-component">
+    <div class="container-full">
+      <div class="container-full__body">
+        <div ref="body" class="container-content">
+          <!--工具栏-->
+          <div class="head-container">
+            <!--如果想在工具栏加入更多按钮，可以使用插槽方式， slot = 'left' or 'right'-->
+            <crudOperation :permission="permission" @choose="handleChoose">
+              <template slot="right">
+                <!-- 搜索 -->
+                <el-select v-model="query.plantMassifId" class="selectCss" placeholder="请选择地块" style="width: 180px;">
+                  <el-option v-for="item in pondList" :key="item.id" :label="item.plantMassifName" :value="item.id" />
+                </el-select>
+                <el-select v-model="query.plantBreedId" class="selectStyle" placeholder="请选择品种" style="width: 180px; margin-left:10px; margin-right:5px">
+                  <el-option v-for="item in breedList" :key="item.id" :label="item.name" :value="item.id" />
+                </el-select>
+              </template>
+            </crudOperation>
+            <!--查看表单组件-->
+            <el-dialog class="view-dialog" :fullscreen="fullscreenView" :close-on-click-modal="false" :before-close="crud.closeView" :visible="crud.status.view" width="960px">
+              <div slot="title" class="el-dialog__title">
+                <div>
+                  <span>{{ crud.status.title }}</span> -
+                  <span>{{ code }}</span>
+                </div>
+                <el-button class="dialog-fullscreen" :icon="fullscreenView? 'el-icon-aliexitfullscreen':'el-icon-alifullscreen'" type="text" @click="fullscreenView = !fullscreenView" />
+              </div>
+
+              <el-form ref="form" :inline="true" :model="form" label-width="110px">
+                <el-form-item label="地块">
+                  <div style="width: 160px;">{{ form.plantMassifName }}</div>
+                </el-form-item>
+                <el-form-item label="品种">
+                  <div style="width: 160px;">{{ form.plantBreedName }}</div>
+                </el-form-item>
+                <el-form-item label="采收量">
+                  <div style="width: 160px;">{{ form.pickWeight }}</div>
+                </el-form-item>
+                <el-form-item label="采收人">
+                  <div style="width: 160px;">{{ form.pickPersonName }}</div>
+                </el-form-item>
+                <el-form-item label="采收时间">
+                  <div style="width: 160px;">{{ parseTime(form.pickDate,'{y}-{m}-{d}') }}</div>
+                </el-form-item>
+              </el-form>
+              <div>
+                <el-form-item label="备注">
+                  <div style="width: 160px;">{{ form.info }}</div>
+                </el-form-item>
+              </div>
+              <div>
+                <el-image v-for="(item,index) in fileList" :key="index" class="view-image" :src="item.url" :preview-src-list="srcList" />
+              </div>
+            </el-dialog>
+
+            <!--编辑表单组件-->
+            <el-dialog :fullscreen="fullscreen" :close-on-click-modal="false" :before-close="handleClose" :visible="crud.status.cu > 0" width="980px">
+              <div slot="title" class="el-dialog__title">
+                <span>{{ crud.status.title }}</span>
+                <el-button class="dialog-fullscreen" :icon="fullscreen? 'el-icon-aliexitfullscreen':'el-icon-alifullscreen'" type="text" @click="fullscreen = !fullscreen" />
+              </div>
+
+              <el-form ref="form" :inline="true" :model="form" :rules="rules" label-width="115px">
+
+                <el-form-item label="地块" prop="plantMassifId">
+                  <el-select v-model="form.plantMassifId" placeholder="请选择" style="width: 180px;" @change="breedChange(form.plantMassifId)">
+                    <el-option v-for="item in pondList" :key="item.id" :label="item.plantMassifName" :value="item.id" />
+                  </el-select>
+                </el-form-item>
+                <!-- <el-form-item label="品种" prop="plantBreedId">
+                  <el-select v-model="form.plantBreedId" placeholder="请选择" style="width: 180px;" @change="handleChange">
+                    <el-option
+                      v-for="item in typeList"
+                      :key="item.id"
+                      :label="item.name"
+                      :value="item.id"
+                    />
+                  </el-select>
+                </el-form-item> -->
+                <el-form-item label="采收重量" prop="pickWeight">
+                  <el-input v-model="form.pickWeight" onkeyup="value=value.match(/\d+\.?\d{0,2}/)" style="width: 180px;" />
+                </el-form-item>
+                <el-form-item label="采收人" prop="pickPersonName">
+                  <el-select v-model="form.pickPersonName" placeholder="请选择" style="width: 180px;" @change="handleChange">
+                    <el-option v-for="item in personList" :key="item.id" :label="item.username" :value="item.id" />
+                  </el-select>
+                </el-form-item>
+                <el-form-item label="采收日期" prop="pickDate">
+                  <el-date-picker v-model="form.pickDate" value-format="yyyy-MM-dd" type="date" placeholder="选择日期" style="width: 180px;" />
+                </el-form-item>
+                <br>
+                <el-form-item label="品种" prop="plantBreedIdList">
+                  <el-checkbox v-for="item in typeList" :key="item.plantBreedId" v-model="form.plantBreedIdList" :label="item.plantBreedId">{{ item.plantBreedName }}</el-checkbox>
+                </el-form-item>
+                <div>
+                  <el-form-item label="备注">
+                    <el-input v-model="form.info" type="textarea" style="width: 480px;" rows="4" />
+                  </el-form-item>
+                </div>
+                <div style="padding-left:115px">
+                  <el-upload list-type="picture-card" name="filename" :headers="headers" accept=".jpg,.jpeg,.png,.gif,.bmp,.JPG,.JPEG,.PBG,.GIF,.BMP" :action="baseApi+ '/api/plantBreed/uploading'"
+                    :on-success="handleAvatarSuccess" :on-remove="handleRemove" :file-list="fileList" :before-upload="beforeAvatarUpload">
+                    <i class="el-icon-plus" />
+                  </el-upload>
+                </div>
+
+              </el-form>
+              <div slot="footer" class="dialog-footer">
+                <el-button :loading="crud.status.cu === 2" type="primary" @click="crud.submitCU">确认</el-button>
+                <el-button @click="crud.cancelCU">取消</el-button>
+              </div>
+            </el-dialog>
+          </div>
+
+          <!--列表渲染-->
+          <div v-show="chooseType === 'card'" class="cardFlex">
+            <el-card v-for="(item, index) in crud.data" :key="index" shadow="hover" class="card" @click.native="crud.toView(item)">
+              <span @click.stop>
+                <el-dropdown trigger="click" placement="bottom" class="card-more" @command="handleCommand">
+                  <span class="el-dropdown-link">
+                    <el-button slot="reference" icon="el-icon-alimore" type="more" />
+                  </span>
+                  <el-dropdown-menu slot="dropdown">
+                    <el-dropdown-item icon="el-icon-alipreview" :command="{ name: 'view', value: item }">查看</el-dropdown-item>
+                    <el-dropdown-item v-permission="['admin', 'plantPickRecords:edit']" icon="el-icon-aliedit" :command="{ name: 'edit', value: item }">编辑</el-dropdown-item>
+                    <el-dropdown-item v-permission="['admin', 'plantPickRecords:del']" icon="el-icon-alidel" :command="{ name: 'del', value: item }">删除</el-dropdown-item>
+                  </el-dropdown-menu>
+                </el-dropdown>
+              </span>
+
+              <div class="title">{{ item.no }}</div>
+              <div class="wrap"><span class="tip">品种名称：</span>{{ item.plantMassifName }}</div>
+              <div class="wrap"><span class="tip">种植地块：</span>{{ item.plantBreedName }}</div>
+              <div class="wrap"><span class="tip">采收重量：</span>{{ item.pickWeight }}</div>
+              <div class="wrap"><span class="tip">采收人：</span>{{ item.pickPersonName }}</div>
+              <div class="wrap"><span class="tip">采收时间：</span>{{ parseTime(item.pickDate,'{y}-{m}-{d}') }}</div>
+            </el-card>
+          </div>
+          <!--表格渲染-->
+          <el-table v-show="chooseType === 'list'" ref="table" v-loading="crud.loading" :max-height="tableHeight" :data="crud.data" style="width: 100%;" stripe>
+            <el-table-column type="selection" width="55" />
+            <el-table-column prop="no" label="编号" width="230px" />
+            <el-table-column prop="plantMassifName" label="种植地块" />
+            <el-table-column prop="plantBreedName" label="品种名称" />
+            <el-table-column prop="pickPersonName" label="采收人" />
+            <el-table-column prop="updateTimeStr" label="操作时间：" sortable />
+            <el-table-column v-if="checkPer(['admin','plantPickRecords:edit','plantPickRecords:del'])" label="操作" width="260px" align="center">
+              <template slot-scope="scope">
+                <udOperation :data="scope.row" :has-view="true" :permission="permission" />
+              </template>
+            </el-table-column>
+          </el-table>
+          <!--分页组件-->
+          <pagination />
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import { mapGetters } from 'vuex'
+import { getToken } from '@/utils/auth'
+import crudPlantPickRecords from '@/api/wisdom/plantPickRecords'
+import { massifList } from '@/api/wisdom/plantMassif'
+import { breedList } from '@/api/wisdom/plantBreed'
+import { getpickPerson, getPlantBreedByMassif } from '@/api/wisdom/plantFarmWorkRecords'
+
+import CRUD, { presenter, header, form, crud } from '@crud/crud'
+import crudOperation from '@crud/CRUD.operation'
+import udOperation from '@crud/UD.operation'
+import pagination from '@crud/Pagination'
+
+const defaultForm = { id: null, plantMassifId: null, plantMassifCode: null, plantMassifName: null, plantBreedId: null, plantBreedIdList: [], plantBreedCode: null, plantBreedName: null, pickWeight: null, pickPersonId: null, pickPersonName: null, pickDate: null, no: null, info: null, status: null, by1: null, by2: null, createBy: null, createTime: null, updateTime: null, orgCompanyId: null, orgCompanyCode: null, orgCompanyName: null, updateBy: null }
+let imageArr = []
+export default {
+  name: 'PlantPickRecords',
+  components: { pagination, crudOperation, udOperation },
+  mixins: [presenter(), header(), form(defaultForm), crud()],
+  cruds() {
+    return CRUD({ title: '采摘记录', url: 'api/plantPickRecords', idField: 'id', sort: 'date,desc', crudMethod: { ...crudPlantPickRecords } })
+  },
+  data() {
+    return {
+      permission: {
+        add: ['admin', 'plantPickRecords:add'],
+        edit: ['admin', 'plantPickRecords:edit'],
+        del: ['admin', 'plantPickRecords:del']
+      },
+      headers: {
+        Authorization: getToken()
+      },
+
+      rules: {
+        plantMassifId: [{ required: true, message: '请选择地块', trigger: 'change' }],
+        plantBreedIdList: [{ required: true, message: '请选择品种', trigger: 'change' }],
+        pickWeight: [{ required: true, message: '请输入采收重量', trigger: 'blur' }],
+        pickPersonName: [{ required: true, message: '请选择采收人', trigger: 'change' }],
+        pickDate: [{ required: true, message: '请选择采收时间', trigger: 'change' }]
+      },
+      typeList: [],
+      pondList: [],
+      chooseType: 'list',
+      fullscreenView: false,
+      fullscreen: false,
+      tableHeight: null,
+      fileList: [],
+      srcList: [],
+      breedList: [],
+      personList: [],
+      no: '',
+      code: ''
+    }
+  },
+  computed: {
+    ...mapGetters(['baseApi'])
+  },
+  mounted() {
+    this.tableHeight = this.$refs.body.offsetHeight - 158 - 40
+    this.getData()
+  },
+  methods: { // 钩子
+    [CRUD.HOOK.beforeToEdit]() {
+      this.form.plantBreedIdList = this.form.plantBreedId.split(',')
+      const arr = []
+      this.form.pidList.map(it => {
+        arr.push({ url: this.baseApi + '/file' + it, response: it })
+      })
+      this.fileList = arr
+      imageArr = this.form.pidList
+    },
+    [CRUD.HOOK.beforeToView]() {
+      this.code = this.form.no
+      const arr = []
+      this.srcList = []
+      this.form.pidList.map(it => {
+        arr.push({ url: this.baseApi + '/file' + it, response: it })
+        this.srcList.push(this.baseApi + '/file' + it)
+      })
+      this.fileList = arr
+    },
+    [CRUD.HOOK.afterSubmit]() {
+      this.clearImage()
+    },
+    clearImage() {
+      imageArr = []
+      this.fileList = []
+    },
+    handleAvatarSuccess(res, file) {
+      imageArr.push(res)
+      this.form.plantPickRecordsPic = imageArr.join(',')
+    },
+    handleRemove(file, fileList) {
+      imageArr = []
+      fileList.map(it => {
+        imageArr.push(it.response)
+      })
+      this.form.plantPickRecordsPic = imageArr.join(',')
+    },
+    beforeAvatarUpload(file) {
+      const isJPG = file.type.indexOf('image') !== -1
+      if (!isJPG) {
+        this.$message.error('请上传图片！')
+      }
+      return isJPG
+    },
+    getData() {
+      massifList().then(res => {
+        this.pondList = res.content
+      })
+      breedList().then(res => {
+        this.breedList = res.content
+      })
+      getpickPerson({ workerType: '种植采摘作业人员' }).then(res => {
+        this.personList = res
+      })
+    },
+    handleChange(value) {
+      this.personList.map(item => {
+        if (item.id === value) {
+          this.form.pickPersonName = item.username
+        }
+      })
+    },
+    handleCommand(command) {
+      if (command.name === 'view') {
+        this.crud.toView(command.value)
+      } else if (command.name === 'edit') {
+        this.crud.toEdit(command.value)
+      } else if (command.name === 'del') {
+        this.$confirm('确定删除该条记录吗？', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(() => {
+          this.crud.doDelete(command.value)
+        })
+      }
+    },
+    handleChoose(value) {
+      this.chooseType = value
+    },
+    handleClose() {
+      this.clearImage()
+      this.crud.cancelCU()
+    },
+    breedChange(data) {
+      this.typeList = []
+      this.pondList.map(item => {
+        if (item.id === data) {
+          this.form.plantMassifName = item.plantMassifName
+          this.form.plantMassifCode = item.plantMassifCode
+        }
+      })
+      getPlantBreedByMassif({ plantMassifId: data }).then(res => {
+        for (var i = 0; i < res.length; i++) {
+          this.typeList.push({ plantBreedId: res[i].id, plantBreedName: res[i].name })
+        }
+      })
+    }
+  }
+}
+</script>
+
+<style>
+.head-container .filter-item input {
+  height: 36px;
+}
+.selectCss {
+  position: relative;
+  left: -7px;
+  top: -4px;
+}
+.selectStyle {
+  position: relative;
+  left: -7px;
+  top: -4px;
+}
+
+.el-input--suffix .el-input__inner {
+  height: 36px;
+  padding-right: 30px;
+}
+</style>
+

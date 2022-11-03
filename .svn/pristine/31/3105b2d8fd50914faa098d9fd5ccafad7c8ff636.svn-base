@@ -1,0 +1,56 @@
+<template>
+  <el-dialog class="view-dialog" :close-on-click-modal="false" :before-close="crud.closeView" :visible="crud.status.view" width="960px">
+    <div slot="title" class="el-dialog__title">
+      <div><span>{{ crud.status.title }}</span> - <span>{{ form.no }}</span></div>
+    </div>
+
+    <el-form ref="form" :inline="true" :model="form" label-width="110px">
+      <el-form-item label="地块">
+        <div style="width: 160px;">{{ form.plantMassifName }}</div>
+      </el-form-item>
+      <el-form-item label="品种">
+        <div style="width: 160px;">{{ form.plantBreedName }}</div>
+      </el-form-item>
+      <el-form-item label="采收重量">
+        <div style="width: 160px;">{{ form.pickWeight }}</div>
+      </el-form-item>
+      <el-form-item label="采收人">
+        <div style="width: 160px;">{{ form.pickPersonId }}</div>
+      </el-form-item>
+      <el-form-item label="采收时间">
+        <div style="width: 160px;">{{ parseTime(form.pickDate,'{y}-{m}-{d}') }}</div>
+      </el-form-item>
+      <div>
+        <el-form-item label="备注">
+          <div style="width: 720px;">{{ form.info }}</div>
+        </el-form-item>
+      </div>
+    </el-form>
+    <div>
+      <img-view ref="view" />
+    </div>
+  </el-dialog>
+</template>
+
+<script>
+import { parseTime } from '@/utils/index'
+import imgView from '@/components/imgView'
+import CRUD, { form, crud } from '@crud/crud'
+export default {
+  components: {
+    imgView
+  },
+  mixins: [form({}), crud()],
+  methods: {
+    [CRUD.HOOK.beforeToView](crud, form) {
+      this.$nextTick(() => {
+        if (this.$refs.view && this.$refs.view.length > 0) { this.$refs.view.pictrueList = [] }
+      })
+      this.$nextTick(() => {
+        this.$refs.view.setValue(form)
+      })
+    },
+    parseTime
+  }
+}
+</script>

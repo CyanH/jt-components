@@ -1,0 +1,70 @@
+<template>
+  <el-table  v-loading="crud.loading" :max-height="maxHeight" :data="crud.data" stripe>
+    <el-table-column type="selection" width="55" />
+    <el-table-column prop="plantManagementCode" label="编号" width="350px" />
+    <el-table-column prop="plantMassifName" label="种植地块" />
+    <el-table-column prop="plantBreedName" label="品种名称" />
+    <el-table-column prop="growthCycle" label="生长周期(天)" />
+    <el-table-column label="状态" align="center">
+      <template slot-scope="scope">
+        <el-tag v-show="scope.row.status==0" type="primary">未开始</el-tag>
+        <el-tag v-show="scope.row.status==2" type="success">已开始</el-tag>
+        <el-tag v-show="scope.row.status==1" type="info">已结束</el-tag>
+      </template>
+    </el-table-column>
+    <el-table-column prop="updateTimeStr" label="操作时间" sortable />
+    <el-table-column v-if="checkPer(['admin','plantManagement:edit','plantManagement:del'])" label="操作" width="260px" align="center">
+      <template slot-scope="scope">
+        <el-dropdown trigger="click" placement="bottom" class="card-more" @command="handleCommand">
+          <span class="el-dropdown-link">
+            <el-button slot="reference" icon="el-icon-alimore" type="more" />
+          </span>
+          <el-dropdown-menu slot="dropdown">
+            <el-dropdown-item icon="el-icon-alipreview" :command="{ name: 'view', value: scope.row }">查看</el-dropdown-item>
+            <el-dropdown-item icon="el-icon-aliedit" :command="{ name: 'edit', value: scope.row }">编辑</el-dropdown-item>
+            <el-dropdown-item icon="el-icon-alidel" :command="{ name: 'del', value: scope.row }">删除</el-dropdown-item>
+            <el-dropdown-item icon="el-icon-alipreview" :disabled="scope.row.status === 1" :command="{ name: 'data', value: scope.row }">结束</el-dropdown-item>
+          </el-dropdown-menu>
+        </el-dropdown>
+
+      </template>
+    </el-table-column>
+  </el-table>
+</template>
+
+<script>
+import crudPlantManagement from '@/api/wisdom/plantManagement'
+export default {
+  props:{
+    crud: Object,
+    maxHeight: Number
+  },
+  methods:{
+    handleCommand(command) {
+      if (command.name === 'view') {
+        this.crud.toView(command.value)
+      } else if (command.name === 'edit') {
+        this.crud.toEdit(command.value)
+      } else if (command.name === 'data') {
+        crudPlantManagement.getByIdFinishTime({ id: command.value.id }), then(res => {
+          this.$notify({
+            title: '结束成功',
+            type: 'success'
+          })
+        })
+      } else if (command.name === 'del') {
+        this.$confirm('确定删除该条记录吗？', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(() => {
+          this.crud.doDelete(command.value)
+        })
+      }
+    },
+  }
+}
+</script>
+
+<style>
+</style>

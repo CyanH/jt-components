@@ -1,0 +1,305 @@
+<template>
+  <div class="page container-component">
+    <div class="container-full">
+      <div class="container-full__body">
+        <div ref="body" class="container-content">
+          <!--工具栏-->
+          <div class="head-container">
+            <!--如果想在工具栏加入更多按钮，可以使用插槽方式， slot = 'left' or 'right'-->
+            <crudOperation :permission="permission" @choose="handleChoose">
+              <template slot="right">
+                <!-- 搜索 -->
+                <el-input v-model="query.plantBaseName" prefix-icon="el-icon-alisearch" clearable placeholder="输入基地名称搜索" style="width: 280px;" class="filter-item" @keyup.enter.native="crud.toQuery" />
+              </template>
+            </crudOperation>
+          </div>
+
+          <!--查看表单组件-->
+          <el-dialog class="view-dialog" :close-on-click-modal="false" :before-close="crud.closeView" :visible="crud.status.view" width="960px">
+            <div slot="title" class="el-dialog__title">{{ crud.status.title }} - {{ code }}</div>
+
+            <el-form ref="form" :inline="true" :model="form" label-width="110px">
+              <el-form-item label="基地名称">
+                <div style="width: 160px;">{{ form.plantBaseName }}</div>
+              </el-form-item>
+              <el-form-item label="基底面积(亩)">
+                <div style="width: 160px;">{{ form.plantBaseArea }}</div>
+              </el-form-item>
+              <el-form-item label="负责人">
+                <div style="width: 160px;">{{ form.dutyPersonName }}</div>
+              </el-form-item>
+              <el-form-item label="描点对象">
+                <div style="width: 155px;">{{ form.config }}</div>
+              </el-form-item>
+              <div>
+                <el-form-item label="备注">
+                  <div style="width: 160px;">{{ form.info }}</div>
+                </el-form-item>
+              </div>
+            </el-form>
+          </el-dialog>
+
+          <!--编辑表单组件-->
+          <el-dialog :title="crud.status.title" :close-on-click-modal="false" :before-close="handleClose" :visible="crud.status.cu > 0" width="980px">
+            <el-form ref="form" :inline="true" :model="form" :rules="rules" label-width="115px">
+              <el-form-item label="基地名称" prop="plantBaseName">
+                <el-input v-model="form.plantBaseName" style="width: 180px;" />
+              </el-form-item>
+              <el-form-item label="基地面积(亩)" prop="plantBaseArea">
+                <el-input v-model="form.plantBaseArea" onkeyup="value=value.match(/\d+\.?\d{0,2}/)" style="width: 180px;" />
+              </el-form-item>
+              <el-form-item label="负责人" prop="dutyPersonName">
+                <el-select v-model="form.dutyPersonName" placeholder="请选择" style="width: 180px;" @change="handleChange">
+                  <el-option v-for="item in personList" :key="item.id" :label="item.username" :value="item.id" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="描点对象" prop="config">
+                <el-input v-model="form.config" style="width: 180px;" />
+              </el-form-item>
+              <div>
+                <el-form-item label="备注">
+                  <el-input v-model="form.info" type="textarea" style="width: 480px;" rows="4" />
+                </el-form-item>
+              </div>
+            </el-form>
+            <div slot="footer" class="dialog-footer">
+              <el-button :loading="crud.status.cu === 2" type="primary" @click="crud.submitCU">确认</el-button>
+              <el-button @click="crud.cancelCU">取消</el-button>
+            </div>
+          </el-dialog>
+
+          <!-- 溯源记录详情 -->
+          <el-dialog title="溯源记录详情" :visible.sync="dialogTableVisible" class="spec-dialog">
+            <el-table :data="syjlDetailList">
+              <el-table-column width="50" />
+              <el-table-column type="index" label="序号" width="150" />
+              <el-table-column property="syCode" label="溯源码" width="280"></el-table-column>
+              <el-table-column property="scanNumber" label="扫码次数" width="180"></el-table-column>
+              <el-table-column prop="date" label="溯源时间" sortable />
+            </el-table>
+          </el-dialog>
+
+          <!--列表渲染-->
+          <div v-show="chooseType === 'card'" class="cardFlex">
+            <el-card v-for="(item, index) in crud.data" :key="index" shadow="hover" class="card" @click.native="crud.toView(item)">
+              <span @click.stop>
+                <el-dropdown trigger="click" placement="bottom" class="card-more" @command="handleCommand">
+                  <span class="el-dropdown-link">
+                    <el-button slot="reference" icon="el-icon-alimore" type="more" />
+                  </span>
+                  <el-dropdown-menu slot="dropdown">
+                    <el-dropdown-item icon="el-icon-alipreview" :command="{ name: 'view', value: item }">查看</el-dropdown-item>
+                    <el-dropdown-item v-permission="['admin', 'plantSyjl:edit']" icon="el-icon-aliedit" :command="{ name: 'edit', value: item }">编辑</el-dropdown-item>
+                    <el-dropdown-item v-permission="['admin', 'plantSyjl:del']" icon="el-icon-alidel" :command="{ name: 'del', value: item }">删除</el-dropdown-item>
+                  </el-dropdown-menu>
+                </el-dropdown>
+              </span>
+
+              <div class="title">{{ item.plantBaseCode }}</div>
+              <div class="wrap"><span class="tip">基地名称：</span>{{ item.plantBaseName }}</div>
+              <div class="wrap"><span class="tip">基地面积：</span>{{ item.PlantBaseArea }}</div>
+              <div class="wrap"><span class="tip">负责人：</span>{{ item.dutyPersonName }}</div>
+            </el-card>
+          </div>
+          <!--表格渲染-->
+          <el-table v-show="chooseType === 'list'" ref="table" v-loading="crud.loading" :max-height="tableHeight" :data="crud.data" style="width: 100%;" @selection-change="crud.selectionChangeHandler" stripe>
+            <el-table-column type="selection" width="55" />
+            <el-table-column label="序号" type="index" width="80" />
+            <el-table-column prop="labelAddress" label="溯源码样式" width="240px">
+              <template slot-scope="scope">
+                <img style="width: 70px; height: 70px" :src="ip+scope.row.labelAddress" />
+              </template>
+            </el-table-column>
+            <el-table-column prop="batchNo" label="批次" width="400px" />
+            <el-table-column prop="amount" label="数量/个" />
+            <el-table-column prop="isOkNumber" label="已扫码数量/个" />
+            <el-table-column prop="createTime" label="创建时间" sortable>
+              <template slot-scope="scope">
+                {{ parseTime(scope.row.createTime,'{y}-{m}-{d}') }}
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="220px" align="center">
+              <template slot-scope="scope">
+                <el-button type="text" @click="donwload(scope.row.labelAddress)">下载</el-button>
+                <el-button type="text" @click="sourceCode(scope.row.id)">溯源码</el-button>
+                <el-button type="text" @click="deleteSyjl(scope.row)">删除</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+          <!--分页组件-->
+          <pagination />
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import { mapGetters } from 'vuex'
+import { getToken } from '@/utils/auth'
+import crudPlantSyjl from '@/api/source/plantSyjl'
+import { getpickPerson } from '@/api/wisdom/plantFarmWorkRecords'
+
+import CRUD, { presenter, header, form, crud } from '@crud/crud'
+import crudOperation from '@crud/CRUD.operation'
+import udOperation from '@crud/UD.operation'
+import pagination from '@crud/Pagination'
+import DateRangePicker from '@/components/DateRangePicker'
+
+const defaultForm = { id: null, syCode: null, syBatchId: null, BatchNo: null, syCodeTypeId: null, Date: null, amount: null, isOkNumber: null, scanNumber: null, info: null, createTime: null, syUser: null }
+
+export default {
+  name: 'PlantSyjl',
+  components: { pagination, crudOperation, udOperation, DateRangePicker },
+  mixins: [presenter(), header(), form(defaultForm), crud()],
+  cruds() {
+    return CRUD({ title: '溯源码记录', url: 'api/plantSyjl', idField: 'id', sort: 'date,desc', crudMethod: { ...crudPlantSyjl } })
+  },
+  data() {
+    return {
+      ip: null,
+      permission: {
+        add: ['admin', 'plantSyjl:add'],
+        edit: ['admin', 'plantSyjl:edit'],
+        del: ['admin', 'plantBase:del']
+      },
+      headers: {
+        Authorization: getToken()
+      },
+
+      rules: {
+        plantBaseName: [{ required: true, message: '请输入基地名称', trigger: 'blur' }],
+        PlantBaseArea: [{ required: true, message: '请输入基地面积', trigger: 'blur' }],
+        dutyPersonName: [{ required: true, message: '请选择负责人', trigger: 'change' }],
+        config: [{ required: true, message: '请输入描点对象', trigger: 'blur' }],
+      },
+      typeList: [],
+      pondList: [],
+      chooseType: 'list',
+      tableHeight: null,
+      fileList: [],
+      srcList: [],
+      code: '',
+      personList: [],
+      dialogTableVisible: false,
+      syjlDetailList: []
+    }
+  },
+  computed: {
+    ...mapGetters(['baseApi'])
+  },
+  mounted() {
+    this.tableHeight = this.$refs.body.offsetHeight - 138
+    this.getData()
+  },
+  created: {
+  },
+  methods: {
+    [CRUD.HOOK.beforeToView]() {
+      this.code = this.form.plantBaseCode
+    },
+    getData() {
+      getpickPerson({ workerType: '种植基地负责人' }).then(res => {
+        this.personList = res
+      })
+      this.ip = this.baseApi + '/file'
+    },
+    handleChange(value) {
+      this.personList.map(item => {
+        if (item.id === value) {
+          this.form.dutyPersonName = item.username
+          this.form.dutyPersonId = item.id
+          this.form.dutyPersonPhone = item.phone
+        }
+      })
+    },
+    handleCommand(command) {
+      if (command.name === 'view') {
+        this.crud.toView(command.value)
+      } else if (command.name === 'edit') {
+        this.crud.toEdit(command.value)
+      } else if (command.name === 'del') {
+        this.$confirm('确定删除该条记录吗？', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(() => {
+          this.crud.doDelete(command.value)
+        })
+      }
+    },
+    handleChoose(value) {
+      this.chooseType = value
+    },
+    handleClose() {
+      this.crud.cancelCU()
+    },
+    //下载图片
+    donwload(e) {
+      if (!e) {
+        return this.msg.msgWarning('下载失败');
+      }
+      console.log(this.baseApi + '/file' + e);
+      let url = this.baseApi + '/file' + e;
+      this.getUrlBase64(url).then(base64 => {
+        let a = document.createElement("a");
+        a.style.display = "none";
+        a.download = e;
+        a.href = base64;
+        document.body.appendChild(a);
+        a.click();
+      });
+
+
+    },
+    getUrlBase64(url) {
+      return new Promise(resolve => {
+        let canvas = document.createElement("canvas");
+        let ctx = canvas.getContext("2d");
+        let img = new Image();
+        img.crossOrigin = "Anonymous"; //允许跨域
+        img.src = url;
+        img.onload = function () {
+          canvas.height = 300;
+          canvas.width = 300;
+          ctx.drawImage(img, 0, 0, 300, 300);
+          let dataURL = canvas.toDataURL("image/png");
+          canvas = null;
+          resolve(dataURL);
+        };
+      });
+    },
+    //溯源码
+    sourceCode(val) {
+      this.syjlDetailList = []
+      crudPlantSyjl.getBySyjl({ id: val }).then(res => {
+
+        for (var i = 0; i < res.length; i++) {
+          this.syjlDetailList.push(res[i])
+        }
+        console.log(this.syjlDetailList)
+      })
+
+      this.dialogTableVisible = true
+    },
+    deleteSyjl(val) {
+      this.$confirm('确定删除该条记录吗？', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(() => {
+        this.crud.doDelete(val)
+      })
+    }
+
+  }
+}
+</script>
+<style lang="scss">
+.spec-dialog .el-dialog__body {
+  padding: 3px 30px;
+  overflow-y: auto;
+  height: calc(100vh - 140px);
+}
+</style>
+

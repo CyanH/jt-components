@@ -1,0 +1,69 @@
+import request from '@/utils/request'
+
+export function getProject(params) {
+  return request({
+    url: 'api/cyyprojectManagement',
+    method: 'get',
+    params
+  })
+}
+export function getMoneyDesc(params) {
+  return request({
+    url: 'api/cyyprojectManagement/getMoneyDesc',
+    method: 'get',
+    params
+  })
+}
+export function add(data) {
+  return request({
+    url: 'api/cyyprojectManagement',
+    method: 'post',
+    data
+  })
+}
+export function upload(data) {
+  return request({
+    url: 'api/cyyPlanMaster/upload',
+    method: 'post',
+    data
+  })
+}
+export function edit(data) {
+  return request({
+    url: 'api/cyyprojectManagement',
+    method: 'put',
+    data
+  })
+}
+export function del(ids) {
+  return request({
+    url: 'api/cyyprojectManagement',
+    method: 'delete',
+    data: ids
+  })
+}
+// 实施主体
+export function getImplement(params) {
+  return request({
+    url: 'api/cyyImplementations',
+    method: 'get',
+    params
+  })
+}
+// 实施主体
+export function getAllImplement(params) {
+  return request({
+    url: 'api/cyyImplementations/getAll',
+    method: 'get',
+    params
+  })
+}
+// 数据字典
+export function getDict(params) {
+  return request({
+    url: 'api/cyyPlanMaster/getDictDetailByDict',
+    method: 'get',
+    params
+  })
+}
+export default { getProject,getMoneyDesc, getAllImplement, add, edit, del, getImplement, getDict,upload }

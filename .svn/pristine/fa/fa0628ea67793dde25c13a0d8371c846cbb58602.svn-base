@@ -1,0 +1,254 @@
+.head-container {
+  padding-bottom: 10px;
+
+  .filter-item {
+    display: inline-block;
+    vertical-align: middle;
+
+    input {
+      height: 40px;
+      line-height: 40px;
+    }
+  }
+
+  .el-form-item-label {
+    margin: 0 3px 9px 0;
+    display: inline-block;
+    text-align: right;
+    vertical-align: middle;
+    font-size: 14px;
+    color: #606266;
+    line-height: 30.5px;
+    padding: 0 7px 0 7px;
+  }
+
+
+  .date-item {
+    vertical-align: middle;
+    margin-right: 8px;
+    width: 270px;
+  }
+}
+
+.el-tabs {
+  margin-bottom: 25px;
+}
+
+
+.el-table__row {
+  .el-button {
+    margin-right: 20px;
+    font-size: 14px;
+    color: #2A68E7;
+    padding: 10px 0;
+
+    &:last-child {
+      margin-right: 0;
+    }
+  }
+
+  .el-button+.el-button {
+    margin-left: 0 !important;
+  }
+}
+
+.el-table {
+  th {
+    background-color: #E4EBF3;
+    color: #37485D;
+  }
+
+  .el-table__fixed-right-patch {
+    background-color: #E4EBF3;
+  }
+}
+
+//el-dialog
+.el-dialog {
+  border-radius: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  margin-top: 0 !important;
+
+  .el-dialog__body {
+    padding: 30px 30px 70px;
+    max-height: 65vh;
+    overflow-y: auto;
+  }
+
+  .el-dialog__footer {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    background-color: #fff;
+  }
+
+  .dialog-footer {
+    text-align: right;
+  }
+}
+
+//el-tree
+.el-tree--highlight-current .el-tree-node.is-current>.el-tree-node__content {
+  color: #5497FC;
+}
+
+//el-form
+.el-form {
+  .el-select {
+    width: 100%;
+  }
+}
+
+.el-dropdown-menu {
+  .el-dropdown-menu__item {
+    line-height: 40px;
+  }
+}
+
+.el-menu--popup-bottom-start {
+  margin-top: 12px;
+}
+
+.el-menu--popup-bottom-start {
+  &:before {
+    /*.before为ie6下用到*/
+    content: '';
+    /*伪类下的属性*/
+    display: block;
+    position: absolute;
+    top: -18px;
+    left: 35px;
+    border: 10px;
+    border-style: dashed dashed solid dashed;
+    border-color: transparent transparent #fff transparent;
+  }
+}
+
+.el-tag {
+  height: 30px;
+}
+
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background-color: #E4E9F1;
+  border-radius: 0px 0px 7px 7px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #AAB4C2;
+  border-radius: 3px;
+}
+
+.view-dialog {
+  .el-form-item {
+    margin-bottom: 5px;
+
+    .el-form-item__label {
+      font-size: 16px;
+      color: #8A8A8A;
+      padding-right: 22px;
+    }
+
+    .el-form-item__content {
+      font-size: 16px;
+      color: #37485D;
+    }
+  }
+}
+
+.view-image {
+  width: 146px;
+  height: 146px;
+  margin-right: 10px;
+  margin-bottom: 10px;
+}
+
+.el-image-viewer__close {
+  color: #fff;
+}
+
+//table-操作，大于3个
+.card-more {
+  margin-left: 20px;
+
+  .el-button {
+    border: 0;
+    padding: 0;
+    background-color: transparent;
+  }
+}
+
+.cardFlex {
+  max-height: calc(100% - 160px);
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  justify-items: center;
+  grid-gap: 20px 25px;
+  padding: 5px;
+
+  .card {
+    cursor: pointer;
+    position: relative;
+    width: 100%;
+    min-height: 180px;
+
+    .card-more {
+      position: absolute;
+      right: 20px;
+      top: 20px;
+      transform: rotate(90deg);
+    }
+
+    .title {
+      font-size: 16px;
+      color: #1D1F23;
+      font-weight: 700;
+      margin-bottom: 14px;
+    }
+
+    .wrap {
+      color: #1D1F23;
+      font-size: 16px;
+
+      .tip {
+        color: #5A5D63;
+        font-size: 14px;
+        margin-right: 15px;
+        min-width: 56px;
+        display: inline-block;
+      }
+
+      .name {
+        font-size: 20px;
+        color: #24C139;
+        font-family: 'PingFangSC-Bold';
+      }
+    }
+
+    .wrap:not(:last-child) {
+      margin-bottom: 10px;
+    }
+
+    .flex {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .img {
+      width: 60px;
+      height: 60px;
+      border-radius: 5px;
+    }
+  }
+
+  .el-card.is-hover-shadow:hover {
+    box-shadow: 0px 2px 10px 0px rgba(0, 26, 110, 0.16);
+  }
+}

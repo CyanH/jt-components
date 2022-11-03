@@ -1,0 +1,72 @@
+<template>
+  <el-dialog class="view-dialog" :close-on-click-modal="false" :before-close="crud.closeView" :visible="crud.status.view" width="960px">
+    <div slot="title" class="el-dialog__title">{{ crud.status.title }} - {{ form.productCode }}</div>
+
+    <el-form :inline="true" :model="form" label-width="110px">
+      <el-form-item label="产品名称">
+        <div style="width: 160px;">{{ form.productName }}</div>
+      </el-form-item>
+      <el-form-item label="品种类别">
+        <div style="width: 160px;">{{ form.plantBreedName }}</div>
+      </el-form-item>
+      <el-form-item label="所属企业">
+        <div style="width: 160px;">{{ form.cyyImplementationsName }}</div>
+      </el-form-item>
+      <el-form-item label="操作时间">
+        <div style="width: 160px;">{{ parseTime(form.updateTimeStr,'{y}-{m}-{d}') }}</div>
+      </el-form-item>
+      <el-form-item label="批次">
+        <div>{{ batchCode }}</div>
+      </el-form-item>
+      <div>
+        <el-form-item label="产品介绍">
+          <div style="width: 760px;">{{ form.productIntroduction }}</div>
+        </el-form-item>
+      </div>
+      <div>
+        <img-view ref="view" />
+      </div>
+    </el-form>
+  </el-dialog>
+</template>
+
+<script>
+import { parseTime } from '@/utils/index'
+import { numberList } from '@/api/source/plantSyBatch'
+
+import imgView from '@/components/imgView'
+import CRUD, { form, crud } from '@crud/crud'
+export default {
+  components: {
+    imgView
+  },
+  mixins: [form({}), crud()],
+  data() {
+    return {
+      batchCode: ''
+    }
+  },
+  methods: {
+    [CRUD.HOOK.beforeToView](crud, form) {
+      this.$nextTick(() => {
+        if (this.$refs.view && this.$refs.view.length > 0) { this.$refs.view.pictrueList = [] }
+      })
+      this.$nextTick(() => {
+        this.$refs.view.setValue(form)
+      })
+
+      numberList({ productId: this.form.id }).then(res => {
+        this.batchCode = ''
+        for (var i = 0; i < res.content.length; i++) {
+          this.batchCode += res.content[i].batchNo + ','
+        }
+        // 去掉最后一个逗号(如果不需要去掉，就不用写)
+        if (this.batchCode.length > 0) {
+          this.batchCode = this.batchCode.substr(0, this.batchCode.length - 1)
+        }
+      })
+    },
+    parseTime
+  }
+}
+</script>

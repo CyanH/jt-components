@@ -1,0 +1,48 @@
+<template>
+  <el-dialog class="view-dialog" :close-on-click-modal="false" :before-close="crud.closeView" :visible="crud.status.view" width="960px">
+    <div slot="title" class="el-dialog__title">
+      <div><span>{{ crud.status.title }}</span> - <span>{{ form.no }}</span></div>
+    </div>
+
+    <el-form ref="form" :inline="true" :model="form" label-width="110px">
+      <el-form-item label="地块">
+        <div style="width: 160px;">{{ form.plantMassifName }}</div>
+      </el-form-item>
+      <el-form-item label="品种">
+        <div style="width: 160px;">{{ form.plantBreedName }}</div>
+      </el-form-item>
+      <el-form-item label="采收量">
+        <div style="width: 160px;">{{ form.pickWeight }}</div>
+      </el-form-item>
+      <el-form-item label="采收人">
+        <div style="width: 160px;">{{ form.pickPersonName }}</div>
+      </el-form-item>
+      <el-form-item label="采收时间">
+        <div style="width: 160px;">{{ parseTime(form.pickDate,'{y}-{m}-{d}') }}</div>
+      </el-form-item>
+      <div>
+        <el-form-item label="备注">
+          <div style="width: 160px;">{{ form.info }}</div>
+        </el-form-item>
+      </div>
+    </el-form>
+    <div>
+      <el-image v-for="(item,index) in fileList" :key="index" class="view-image" :src="item.url" :preview-src-list="srcList" />
+    </div>
+  </el-dialog>
+</template>
+
+<script>
+import { parseTime } from '@/utils/index'
+export default {
+  props: {
+    crud: Object,
+    form: Object,
+    fileList: Array,
+    srcList: Array
+  },
+  methods: {
+    parseTime
+  }
+}
+</script>

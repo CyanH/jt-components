@@ -1,0 +1,101 @@
+<template>
+  <div class="page container-component">
+    <div class="container-full">
+      <div class="container-full__body">
+        <div ref="body" class="container-content">
+          <!--工具栏-->
+          <div class="head-container">
+            <!--如果想在工具栏加入更多按钮，可以使用插槽方式， slot = 'left' or 'right'-->
+            <crudOperation :permission="permission" @choose="handleChoose">
+              <template slot="right">
+                <!-- 搜索 -->
+                <el-input v-model="query.plantBreedName" prefix-icon="el-icon-alisearch" clearable placeholder="请输入搜索内容" style="width: 180px;" class="filter-item" @keyup.enter.native="crud.toQuery" />
+              </template>
+            </crudOperation>
+
+            <filter-bar :list="filterList" @choose="filterData"></filter-bar>
+          </div>
+          <!--查看表单组件-->
+          <view-dialog :crud="crud" :form="form"></view-dialog>
+
+          <!--编辑表单组件-->
+          <edit-dialog />
+
+          <!--表格渲染-->
+          <table-cont v-show="chooseType === 'list'" :crud="crud" :maxHeight="tableHeight"></table-cont>
+
+          <!--列表渲染-->
+          <card-cont v-show="chooseType === 'card'" :crud="crud"></card-cont>
+
+          <!--分页组件-->
+          <pagination />
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import { getToken } from '@/utils/auth'
+import crudPlantManagement from '@/api/wisdom/plantManagement'
+
+import CRUD, { presenter, header, form, crud } from '@crud/crud'
+import crudOperation from '@crud/CRUD.operation'
+import pagination from '@crud/Pagination'
+import DateRangePicker from '@/components/DateRangePicker'
+import filterBar from '@/components/fiterBar'
+
+import tableCont from './components/table.vue'
+import cardCont from './components/card.vue'
+import viewDialog from './components/viewDialog.vue'
+import editDialog from './components/editDialog.vue'
+
+const defaultForm = { id: null, plantManagementCode: null, plantMassifId: null, plantMassifCode: null, plantBreedId: null, plantMassifName: null, plantBreedCode: null, plantBreedName: [], plantSize: null, growthCycle: null, plantDate: null, longitude: null, latitude: null, info: null, status: null, by1: null, by2: null, createBy: null, createTime: null, updateTime: null, orgCompanyId: null, orgCompanyCode: null, orgCompanyName: null, updateBy: null }
+export default {
+  name: 'PlantManagement',
+  components: { pagination, crudOperation, DateRangePicker, filterBar, tableCont, cardCont, viewDialog, editDialog },
+  mixins: [presenter(), header(), form(defaultForm), crud()],
+  cruds() {
+    return CRUD({ title: '种植管理', url: 'api/plantManagement', idField: 'id', sort: 'date,desc', crudMethod: { ...crudPlantManagement } })
+  },
+  data() {
+    return {
+      permission: {
+        add: ['admin', 'plantManagement:add'],
+        edit: ['admin', 'plantManagement:edit'],
+        del: ['admin', 'plantManagement:del']
+      },
+      headers: {
+        Authorization: getToken()
+      },
+      chooseType: 'list',
+      tableHeight: null,
+      filterList: [{
+        label: '未开始',
+        value: 0
+      },
+      {
+        label: '已开始',
+        value: 2
+      },
+      {
+        label: '已结束',
+        value: 1
+      }]
+    }
+  },
+  mounted() {
+    this.tableHeight = this.$refs.body.offsetHeight - 180
+  },
+  methods: {
+    handleChoose(value) {
+      this.chooseType = value
+    },
+    filterData(item) {
+      //过滤列表
+    }
+  }
+}
+</script>
+
+

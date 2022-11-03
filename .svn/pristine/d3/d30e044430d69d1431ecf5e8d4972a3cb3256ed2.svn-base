@@ -1,0 +1,351 @@
+<template>
+  <div class="page container-component">
+    <div class="container-full">
+      <div class="container-full__body">
+        <div ref="body" class="container-content">
+          <!--工具栏-->
+          <div class="head-container">
+            <div style="height:36px; margin-bottom:8px">
+              <!-- 搜索 -->
+              <el-input v-model="query.plantBreedName" prefix-icon="el-icon-alisearch" clearable placeholder="输入品种名称搜索" style="width: 180px;" class="filter-item" @keyup.enter.native="crud.toQuery" />
+              <el-input v-model="query.plantMassifName" prefix-icon="el-icon-alisearch" clearable placeholder="输入地块名称搜索" style="width: 180px;" class="filter-item" @keyup.enter.native="crud.toQuery" />
+              <el-select v-model="query.status" class="selectCss" placeholder="请选择状态" style="width: 180px; margin-left:10px; margin-right:5px;">
+                <el-option value="">全部</el-option>
+                <el-option
+                  v-for="item in sexList"
+                  :key="item.id"
+                  :label="item.label"
+                  :value="item.value"
+                />
+              </el-select>
+
+              <!-- <el-button type="info" v-model="query.status"  @keyup.enter.native="crud.toQuery">0</el-button> &nbsp;
+            <el-button type="primary" v-model="query.status"  @keyup.enter.native="crud.toQuery">1</el-button> &nbsp;
+            <el-button type="danger"v-model="query.status"  @keyup.enter.native="crud.toQuery">2</el-button> -->
+              <rrOperation />
+            </div>
+            <!--如果想在工具栏加入更多按钮，可以使用插槽方式， slot = 'left' or 'right'-->
+            <crudOperation :permission="permission" @choose="handleChoose" />
+            <!--查看表单组件-->
+            <el-dialog class="view-dialog" :fullscreen="fullscreenView" :close-on-click-modal="false" :before-close="crud.closeView" :visible="crud.status.view" width="960px">
+              <div slot="title" class="el-dialog__title">
+                <div>
+                  <span>{{ crud.status.title }}</span> -
+                  <span>{{ code }}</span>
+                </div>
+                <el-button class="dialog-fullscreen" :icon="fullscreenView? 'el-icon-aliexitfullscreen':'el-icon-alifullscreen'" type="text" @click="fullscreenView = !fullscreenView" />
+              </div>
+
+              <el-form ref="form" :inline="true" :model="form" label-width="120px">
+                <el-form-item label="地块">
+                  <div style="width: 160px;">{{ form.plantMassifName }}</div>
+                </el-form-item>
+                <el-form-item label="品种">
+                  <div style="width: 160px;">{{ form.plantBreedName }}</div>
+                </el-form-item>
+                <el-form-item label="种植规模">
+                  <div style="width: 160px;">{{ form.plantSize }}</div>
+                </el-form-item>
+                <el-form-item label="生长周期(天)">
+                  <div style="width: 160px;">{{ form.growthCycle }}</div>
+                </el-form-item>
+                <el-form-item label="经度">
+                  <div style="width: 160px;">{{ form.longitude }}</div>
+                </el-form-item>
+                <el-form-item label="纬度">
+                  <div style="width: 160px;">{{ form.latitude }}</div>
+                </el-form-item>
+                <el-form-item label="种植时间">
+                  <div style="width: 160px;">{{ parseTime(form.plantDate,'{y}-{m}-{d}') }}</div>
+                </el-form-item>
+                <div>
+                  <el-form-item label="备注">
+                    <div style="width: 160px;">{{ form.info }}</div>
+                  </el-form-item>
+                </div>
+              </el-form>
+            </el-dialog>
+
+            <!--编辑表单组件-->
+            <el-dialog :fullscreen="fullscreen" :close-on-click-modal="false" :before-close="handleClose" :visible="crud.status.cu > 0" width="980px">
+              <div slot="title" class="el-dialog__title">
+                <span>{{ crud.status.title }}</span>
+                <el-button class="dialog-fullscreen" :icon="fullscreen? 'el-icon-aliexitfullscreen':'el-icon-alifullscreen'" type="text" @click="fullscreen = !fullscreen" />
+              </div>
+
+              <el-form ref="form" :inline="true" :model="form" :rules="rules" label-width="115px">
+
+                <el-form-item label="地块" prop="plantMassifId">
+                  <el-select v-model="form.plantMassifId" placeholder="请选择" style="width: 180px;" @change="handleChange">
+                    <el-option
+                      v-for="item in pondList"
+                      :key="item.id"
+                      :label="item.plantMassifName"
+                      :value="item.id"
+                    />
+                  </el-select>
+                </el-form-item>
+                <el-form-item label="品种" prop="plantBreedId">
+                  <el-select v-model="form.plantBreedId" placeholder="请选择" style="width: 180px;" @change="handleChange">
+                    <el-option
+                      v-for="item in typeList"
+                      :key="item.id"
+                      :label="item.name"
+                      :value="item.id"
+                    />
+                  </el-select>
+                </el-form-item>
+                <el-form-item label="种植规模" prop="plantSize">
+                  <el-input v-model="form.plantSize" style="width: 180px;" />
+                </el-form-item>
+                <el-form-item label="经度" prop="longitude">
+                  <el-input v-model="form.longitude" onkeyup="value=value.match(/\d+\.?\d{0,6}/)" style="width: 180px;" />
+                </el-form-item>
+                <el-form-item label="纬度" prop="latitude">
+                  <el-input v-model="form.latitude" onkeyup="value=value.match(/\d+\.?\d{0,6}/)" style="width: 180px;" />
+                </el-form-item>
+                <el-form-item label="种植时间" prop="plantDate">
+                  <el-date-picker
+                    v-model="form.plantDate"
+                    value-format="yyyy-MM-dd"
+                    type="date"
+                    placeholder="选择日期"
+                    style="width: 180px;"
+                  />
+                </el-form-item>
+
+                <!-- <el-form-item label="品种" prop="plantBreedIdList">
+                  <el-checkbox v-for="item in typeList" :key="item.id" v-model="form.plantBreedIdList" :label="item.id" >{{ item.name }}</el-checkbox>
+                </el-form-item> -->
+                <div>
+                  <el-form-item label="备注">
+                    <el-input v-model="form.info" type="textarea" style="width: 480px;" rows="4" />
+                  </el-form-item>
+                </div>
+              </el-form>
+              <div slot="footer" class="dialog-footer">
+                <el-button :loading="crud.status.cu === 2" type="primary" @click="crud.submitCU">确认</el-button>
+                <el-button @click="crud.cancelCU">取消</el-button>
+              </div>
+            </el-dialog>
+          </div>
+
+          <!--列表渲染-->
+          <div v-show="chooseType === 'card'" class="cardFlex">
+            <el-card v-for="(item, index) in crud.data" :key="index" shadow="hover" class="card" @click.native="crud.toView(item)">
+              <span @click.stop>
+                <el-dropdown trigger="click" placement="bottom" class="card-more" @command="handleCommand">
+                  <span class="el-dropdown-link">
+                    <el-button slot="reference" icon="el-icon-alimore" type="more" />
+                  </span>
+                  <el-dropdown-menu slot="dropdown">
+                    <el-dropdown-item icon="el-icon-alipreview" :command="{ name: 'view', value: item }">查看</el-dropdown-item>
+                    <el-dropdown-item v-permission="['admin', 'plantManagement:edit']" icon="el-icon-aliedit" :command="{ name: 'edit', value: item }">编辑</el-dropdown-item>
+                    <el-dropdown-item v-permission="['admin', 'plantManagement:del']" icon="el-icon-alidel" :command="{ name: 'del', value: item }">删除</el-dropdown-item>
+                  </el-dropdown-menu>
+                </el-dropdown>
+              </span>
+
+              <div class="title">{{ item.code }}</div>
+              <div class="wrap"><span class="tip">品种名称：</span>{{ item.plantMassifName }}</div>
+              <div class="wrap"><span class="tip">种植地块：</span>{{ item.plantBreedName }}</div>
+              <div class="wrap"><span class="tip">种植规模：</span>{{ item.plantSize }}</div>
+              <div class="wrap"><span class="tip">生长周期：</span>{{ item.growthCycle }}</div>
+              <div class="wrap"><span class="tip">种植时间：</span>{{ parseTime(item.plantDate,'{y}-{m}-{d}') }}</div>
+            </el-card>
+          </div>
+          <!--表格渲染-->
+          <el-table v-show="chooseType === 'list'" ref="table" v-loading="crud.loading" :max-height="tableHeight" :data="crud.data" style="width: 100%;" @selection-change="crud.selectionChangeHandler">
+            <el-table-column type="selection" width="55" />
+            <el-table-column prop="plantManagementCode" label="编号" width="350px" />
+            <el-table-column prop="plantMassifName" label="种植地块" />
+            <el-table-column prop="plantBreedName" label="品种名称" />
+            <el-table-column prop="growthCycle" label="生长周期(天)" />
+            <el-table-column label="状态" align="center">
+              <template slot-scope="scope">
+                <el-tag v-show="scope.row.status==0" type="primary">未开始</el-tag>
+                <el-tag v-show="scope.row.status==2" type="success">已开始</el-tag>
+                <el-tag v-show="scope.row.status==1" type="info">已结束</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="updateTimeStr" label="操作时间" sortable />
+            <!-- <el-table-column v-if="checkPer(['admin','plantManagement:edit','plantManagement:del'])" label="操作" width="260px" align="center">
+              <template slot-scope="scope">
+                <udOperation
+                  :data="scope.row"
+                  :has-view="true"
+                  :permission="permission"
+                />
+              </template>
+            </el-table-column> -->
+            <el-table-column v-if="checkPer(['admin','plantManagement:edit','plantManagement:del'])" label="操作" width="260px" align="center">
+              <template slot-scope="scope">
+                <el-dropdown trigger="click" placement="bottom" class="card-more" @command="handleCommand">
+                  <span class="el-dropdown-link">
+                    <el-button slot="reference" icon="el-icon-alimore" type="more" />
+                  </span>
+                  <el-dropdown-menu slot="dropdown">
+                    <el-dropdown-item icon="el-icon-alipreview" :command="{ name: 'view', value: scope.row }">查看</el-dropdown-item>
+                    <el-dropdown-item icon="el-icon-aliedit" :command="{ name: 'edit', value: scope.row }">编辑</el-dropdown-item>
+                    <el-dropdown-item icon="el-icon-alidel" :command="{ name: 'del', value: scope.row }">删除</el-dropdown-item>
+                    <el-dropdown-item icon="el-icon-alipreview" :disabled="scope.row.status === 1" :command="{ name: 'data', value: scope.row }">结束</el-dropdown-item>
+                  </el-dropdown-menu>
+                </el-dropdown>
+
+              </template>
+            </el-table-column>
+          </el-table>
+          <!--分页组件-->
+          <pagination />
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import { getToken } from '@/utils/auth'
+import crudPlantManagement from '@/api/wisdom/plantManagement'
+import { breedList } from '@/api/wisdom/plantBreed'
+import { massifList } from '@/api/wisdom/plantMassif'
+
+import CRUD, { presenter, header, form, crud } from '@crud/crud'
+import rrOperation from '@crud/RR.operation'
+import crudOperation from '@crud/CRUD.operation'
+import udOperation from '@crud/UD.operation'
+import pagination from '@crud/Pagination'
+import DateRangePicker from '@/components/DateRangePicker'
+
+const defaultForm = { id: null, plantManagementCode: null, plantMassifId: null, plantMassifCode: null, plantBreedId: null, plantMassifName: null, plantBreedCode: null, plantBreedName: [], plantSize: null, growthCycle: null, plantDate: null, longitude: null, latitude: null, info: null, status: null, by1: null, by2: null, createBy: null, createTime: null, updateTime: null, orgCompanyId: null, orgCompanyCode: null, orgCompanyName: null, updateBy: null }
+export default {
+  name: 'PlantManagement',
+  components: { pagination, crudOperation, rrOperation, udOperation, DateRangePicker },
+  mixins: [presenter(), header(), form(defaultForm), crud()],
+  cruds() {
+    return CRUD({ title: '种植管理', url: 'api/plantManagement', idField: 'id', sort: 'date,desc', crudMethod: { ...crudPlantManagement }})
+  },
+  data() {
+    return {
+      permission: {
+        add: ['admin', 'plantManagement:add'],
+        edit: ['admin', 'plantManagement:edit'],
+        del: ['admin', 'plantManagement:del']
+      },
+      headers: {
+        Authorization: getToken()
+      },
+
+      rules: {
+        plantMassifId: [{ required: true, message: '请选择地块', trigger: 'change' }],
+        plantBreedId: [{ required: true, message: '请选择品种', trigger: 'change' }],
+        plantSize: [{ required: true, message: '请输入种植规模', trigger: 'blur' }],
+        plantDate: [{ required: true, message: '请输入种植时间', trigger: 'blur' }],
+        longitude: [{ required: true, message: '请输入经度', trigger: 'blur' }],
+        latitude: [{ required: true, message: '请输入纬度', trigger: 'blur' }]
+      },
+      typeList: [],
+      pondList: [],
+      chooseType: 'list',
+      fullscreenView: false,
+      fullscreen: false,
+      tableHeight: null,
+      fileList: [],
+      srcList: [],
+      code: '',
+      sexList: [{
+        label: '未开始',
+        value: 0
+      },
+      {
+        label: '已开始',
+        value: 2
+      },
+      {
+        label: '已结束',
+        value: 1
+      }
+      ]
+    }
+  },
+  computed: {
+  },
+  mounted() {
+    this.tableHeight = this.$refs.body.offsetHeight - 158 - 40
+    this.getData()
+  },
+  methods: {
+    [CRUD.HOOK.beforeToView]() {
+      this.code = this.form.plantManagementCode
+    },
+    [CRUD.HOOK.beforeToEdit]() {
+      // this.form.plantBreedIdList = this.form.plantBreedId.split(',')
+    },
+    getData() {
+      massifList().then(res => {
+        this.pondList = res.content
+      })
+      breedList().then(res => {
+        this.typeList = res.content
+      })
+    },
+    handleChange(value) {
+      this.pondList.map(item => {
+        if (item.id === value) {
+          this.form.plantMassifName = item.plantMassifName
+          this.form.plantMassifCode = item.plantMassifCode
+        }
+      })
+      this.typeList.map(item => {
+        if (item.id === value) {
+          this.form.plantBreedName = item.name
+          this.form.plantBreedCode = item.code
+        }
+      })
+    },
+    handleCommand(command) {
+      if (command.name === 'view') {
+        this.crud.toView(command.value)
+      } else if (command.name === 'edit') {
+        this.crud.toEdit(command.value)
+      } else if (command.name === 'data') {
+        crudPlantManagement.getByIdFinishTime({ id: command.value.id }), then(res => {
+          this.$notify({
+            title: '结束成功',
+            type: 'success'
+          })
+        })
+      } else if (command.name === 'del') {
+        this.$confirm('确定删除该条记录吗？', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(() => {
+          this.crud.doDelete(command.value)
+        })
+      }
+    },
+    handleChoose(value) {
+      this.chooseType = value
+    },
+    handleClose() {
+      this.crud.cancelCU()
+    }
+  }
+}
+</script>
+<style>
+.head-container .filter-item input {
+  height: 36px;
+}
+.selectCss {
+    position: relative;
+    left: -7px;
+    top: -4px;
+}
+
+.el-input--suffix .el-input__inner {
+  height: 36px;
+  padding-right: 30px;
+}
+</style>
+

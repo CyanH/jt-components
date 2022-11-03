@@ -1,0 +1,81 @@
+<template>
+  <el-table v-loading="crud.loading" :max-height="maxHeight" :data="crud.data" @selection-change="crud.selectionChangeHandler" stripe>
+    <el-table-column type="selection" width="55" />
+    <el-table-column label="序号" type="index" width="80" />
+    <el-table-column prop="plantManagementCode" label="编号" width="300px" />
+    <el-table-column prop="plantMassifName" label="种植地块" />
+    <el-table-column prop="plantBreedName" label="品种名称" />
+    <el-table-column prop="growthCycle" label="生长周期(天)" />
+    <el-table-column label="状态">
+      <template slot-scope="scope">
+        <span :style="setStatusStyle(scope.row.status)">{{setStatusText(scope.row.status)}}</span>
+      </template>
+    </el-table-column>
+    <el-table-column prop="updateTimeStr" label="操作时间" sortable />
+    <el-table-column v-if="checkPer(['admin','plantManagement:edit','plantManagement:del'])" label="操作" width="220px" align="center">
+      <template slot-scope="scope">
+        <udOperation :data="scope.row" :has-view="true" :permission="permission">
+          <el-dropdown trigger="click" placement="bottom" class="card-more" @command="handleCommand">
+            <span class="el-dropdown-link">
+              <el-button slot="reference" icon="el-icon-alimore" type="more" />
+            </span>
+            <el-dropdown-menu slot="dropdown">  
+              <el-dropdown-item icon="el-icon-alipreview" :disabled="scope.row.status === 1" :command="{ name: 'over', value: scope.row }">结束</el-dropdown-item>
+            </el-dropdown-menu>
+          </el-dropdown>
+        </udOperation>
+      </template>
+    </el-table-column>
+  </el-table>
+</template>
+
+<script>
+import udOperation from '@crud/UD.operation'
+import crudPlantManagement from '@/api/wisdom/plantManagement'
+export default {
+  props: {
+    crud: Object,
+    maxHeight: Number
+  },
+  components: {
+    udOperation
+  },
+  data() {
+    return {
+      permission: {
+        add: ['admin', 'plantManagement:add'],
+        edit: ['admin', 'plantManagement:edit'],
+        del: ['admin', 'plantManagement:del']
+      },
+    }
+  },
+  methods: {
+    handleCommand(command) {
+     if (command.name === 'over') {
+        crudPlantManagement.getByIdFinishTime({ id: command.value.id }).then(() => {
+          this.$notify({
+            title: '结束成功',
+            type: 'success'
+          })
+        })
+      }
+    },
+    setStatusStyle(status) {
+      let styleObj = {
+        0: '#2875E0',
+        1: '#999999',
+        2: '#24C139'
+      }
+      return { color: styleObj[status] }
+    },
+    setStatusText(status) {
+      let textObj = {
+        0: '未开始',
+        1: '已结束',
+        2: '已开始'
+      }
+      return textObj[status]
+    },
+  }
+}
+</script>

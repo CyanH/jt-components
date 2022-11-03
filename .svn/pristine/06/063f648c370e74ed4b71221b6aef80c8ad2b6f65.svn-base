@@ -1,0 +1,42 @@
+<!--搜索与重置-->
+<template>
+  <el-button class="filter-item" type="search" size="small" icon="el-icon-alisearch" @click="crud.toQuery">搜索</el-button>
+</template>
+<script>
+import { crud } from '@crud/crud'
+export default {
+  mixins: [crud()],
+  props: {
+    itemClass: {
+      type: String,
+      required: false,
+      default: ''
+    }
+  }
+}
+</script>
+
+<style lang="scss">
+.el-icon-my-export:before{
+    content: "&#xe614";
+    font-size: 16px;
+    visibility: hidden;
+}
+
+.el-button--search, .el-button--search:focus {
+    
+  font-size: 16px;
+  ::v-deep i{
+    font-size: 16px;
+  }
+}
+
+.el-icon-alisearch:before {
+    content: "\e615";
+    font-size: 16px;
+}
+.head-container .filter-item input {
+    height: 36px;
+    line-height: 36px;
+}
+</style>

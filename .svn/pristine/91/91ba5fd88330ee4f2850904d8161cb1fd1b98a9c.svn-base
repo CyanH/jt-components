@@ -1,0 +1,84 @@
+<template>
+  <el-dialog :close-on-click-modal="false" :before-close="handleClose" :visible="crud.status.cu > 0" :title="crud.status.title" width="980px">
+    <el-form ref="form" :inline="true" :model="form" :rules="rules" label-width="115px">
+      <el-form-item label="地块" prop="plantMassifId">
+        <el-select v-model="form.plantMassifId" placeholder="请选择" style="width: 180px;" @change="handleChange">
+          <el-option v-for="item in pondList" :key="item.id" :label="item.plantMassifName" :value="item.id" />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="品种" prop="plantBreedId">
+        <el-select v-model="form.plantBreedId" placeholder="请选择" style="width: 180px;" @change="handleChange">
+          <el-option v-for="item in typeList" :key="item.id" :label="item.name" :value="item.id" />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="种植规模" prop="plantSize">
+        <el-input v-model="form.plantSize" style="width: 180px;" />
+      </el-form-item>
+      <el-form-item label="种植时间" prop="plantDate">
+        <el-date-picker v-model="form.plantDate" value-format="yyyy-MM-dd" type="date" placeholder="选择日期" style="width: 180px;" />
+      </el-form-item>
+
+      <div>
+        <el-form-item label="备注">
+          <el-input v-model="form.info" type="textarea" style="width: 480px;" rows="4" />
+        </el-form-item>
+      </div>
+    </el-form>
+    <div slot="footer" class="dialog-footer">
+      <el-button :loading="crud.status.cu === 2" type="primary" @click="crud.submitCU">确认</el-button>
+      <el-button @click="crud.cancelCU">取消</el-button>
+    </div>
+  </el-dialog>
+</template>
+
+<script>
+import { breedList } from '@/api/wisdom/plantBreed'
+import { massifList } from '@/api/wisdom/plantMassif'
+import { form, crud } from '@crud/crud'
+const defaultForm = { id: null, plantManagementCode: null, plantMassifId: null, plantMassifCode: null, plantBreedId: null, plantMassifName: null, plantBreedCode: null, plantBreedName: [], plantSize: null, growthCycle: null, plantDate: null, longitude: null, latitude: null, info: null, status: null, by1: null, by2: null, createBy: null, createTime: null, updateTime: null, orgCompanyId: null, orgCompanyCode: null, orgCompanyName: null, updateBy: null }
+export default {
+  mixins: [ form(defaultForm), crud()],
+  data() {
+    return {
+      pondList: [],
+      typeList: [],
+      rules: {
+        plantMassifId: [{ required: true, message: '请选择地块', trigger: 'change' }],
+        plantBreedId: [{ required: true, message: '请选择品种', trigger: 'change' }],
+        plantSize: [{ required: true, message: '请输入种植规模', trigger: 'blur' }],
+        plantDate: [{ required: true, message: '请输入种植时间', trigger: 'blur' }]
+      }
+    }
+  },
+  mounted() {
+    this.getData()
+  },
+  methods: {
+    handleChange(value) {
+      this.pondList.map(item => {
+        if (item.id === value) {
+          this.form.plantMassifName = item.plantMassifName
+          this.form.plantMassifCode = item.plantMassifCode
+        }
+      })
+      this.typeList.map(item => {
+        if (item.id === value) {
+          this.form.plantBreedName = item.name
+          this.form.plantBreedCode = item.code
+        }
+      })
+    },
+    getData() {
+      massifList().then(res => {
+        this.pondList = res.content
+      })
+      breedList().then(res => {
+        this.typeList = res.content
+      })
+    },
+    handleClose() {
+      this.crud.cancelCU()
+    }
+  }
+}
+</script>

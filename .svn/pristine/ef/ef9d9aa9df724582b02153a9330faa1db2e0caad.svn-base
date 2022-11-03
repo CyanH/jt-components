@@ -1,0 +1,42 @@
+<template>
+  <div v-if="showPreview" class="imgPreview">
+    <img :src="previewSrc">
+    <i class="el-icon-error close" @click="handleClose" />
+  </div>
+</template>
+
+<script>
+import { mapGetters } from 'vuex'
+export default {
+  name: 'App',
+  computed: {
+    ...mapGetters(['showPreview', 'previewSrc'])
+  },
+  methods: {
+    handleClose() {
+      this.$store.dispatch('preview/close')
+    }
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+.imgPreview{
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  text-align: center;
+  z-index: 9999;
+
+  .close{
+    position: absolute;
+    cursor: pointer;
+    font-size: 28px;
+    right: 30px;
+    top: 20px;
+    color:  #D8D8D8;
+  }
+}
+</style>

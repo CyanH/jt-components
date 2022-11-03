@@ -1,0 +1,29 @@
+const getters = {
+  menuHeader: state => state.menu.header,
+  aside: state => state.menu.aside,
+  asideCollapse: state => state.menu.asideCollapse,
+  asideTransition: state => state.menu.asideTransition,
+
+  keepAlive: state => state.page.keepAlive,
+  grayActive: state => state.gray.active,
+  opened: state => state.page.opened,
+  current: state => state.page.current,
+
+  themeList: state => state.theme.list,
+  themeActiveName: state => state.theme.activeName,
+  fullscreen: state => state.fullscreen.active,
+
+  token: state => state.user.token,
+  roles: state => state.user.roles,
+  user: state => state.user.user,
+  loadMenus: state => state.user.loadMenus,
+
+  baseApi: state => state.api.baseApi,
+  updateAvatarApi: state => state.api.updateAvatarApi,
+  sidebarRouters: state => state.permission.sidebarRouters,
+
+  showPreview: state => state.preview.showPreview,
+  previewSrc: state => state.preview.previewSrc
+
+}
+export default getters

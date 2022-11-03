@@ -1,0 +1,51 @@
+export default {
+  // 侧边栏默认配置
+  menu: {
+    asideCollapse: false,
+    asideTransition: true
+  },
+  // 在读取持久化数据失败时默认页面
+  page: {
+    opened: [
+      {
+        name: 'index',
+        fullPath: '/index',
+        meta: {
+          title: '首页',
+          auth: false
+        }
+      }
+    ]
+  },
+  // 注册的主题
+  theme: {
+    list: [
+      {
+        title: '经典',
+        name: 'default',
+        preview: 'image/theme/default/preview@2x.png'
+      },
+      {
+        title: '紫罗兰',
+        name: 'violet',
+        preview: 'image/theme/violet/preview@2x.png'
+      }
+    ]
+  },
+  /**
+   * @description 记住密码状态下的token在Cookie中存储的天数，默认1天
+   */
+  tokenCookieExpires: 1,
+  /**
+   * @description 记住密码状态下的密码在Cookie中存储的天数，默认1天s
+   */
+  passCookieExpires: 1,
+  /**
+   * @description 请求超时时间，毫秒
+   */
+  timeout: 15000,
+  /**
+   * @description token key
+   */
+  TokenKey: 'EL-ADMIN-TOEKN'
+}

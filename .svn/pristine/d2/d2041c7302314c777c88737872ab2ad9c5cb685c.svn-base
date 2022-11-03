@@ -1,0 +1,65 @@
+<template>
+  <div class="cardFlex">
+    <el-card v-for="(item, index) in crud.data" :key="index" shadow="hover" class="card" @click.native="crud.toView(item)">
+      <span @click.stop>
+        <el-dropdown trigger="click" placement="bottom" class="card-more" @command="handleCommand">
+          <span class="el-dropdown-link">
+            <el-button slot="reference" icon="el-icon-alimore" type="more" />
+          </span>
+          <el-dropdown-menu slot="dropdown">
+            <el-dropdown-item icon="el-icon-alipreview" :command="{ name: 'view', value: item }">查看</el-dropdown-item>
+            <el-dropdown-item v-permission="['admin', 'plantPickRecords:edit']" icon="el-icon-aliedit" :command="{ name: 'edit', value: item }">编辑</el-dropdown-item>
+            <el-dropdown-item v-permission="['admin', 'plantPickRecords:del']" icon="el-icon-alidel" :command="{ name: 'del', value: item }">删除</el-dropdown-item>
+          </el-dropdown-menu>
+        </el-dropdown>
+      </span>
+
+      <div class="title">{{ item.no }}</div>
+      <div class="flex wrap">
+        <div>
+          <div class="wrap"><span class="tip">品种名称</span><span class="name">{{ item.plantBreedName }}</span></div>
+          <div class="wrap"><span class="tip">种植地块</span>{{ item.plantBreedName }}</div>
+        </div>
+        <img v-if="item.pidList.length>0" :src="setImg(item.pidList[0])" class="img">
+      </div>
+      <div class="wrap"><span class="tip">采收重量</span>{{ item.pickWeight }}</div>
+      <div class="wrap"><span class="tip">采收人</span>{{ item.pickPersonName }}</div>
+      <div class="wrap"><span class="tip">采收时间</span>{{ parseTime(item.pickDate,'{y}-{m}-{d}') }}</div>
+    </el-card>
+  </div>
+</template>
+
+<script>
+import { mapGetters } from 'vuex'
+import { parseTime } from '@/utils/index'
+
+export default {
+  props: {
+    crud: Object
+  },
+  computed: {
+    ...mapGetters(['baseApi'])
+  },
+  methods: {
+    parseTime,
+    handleCommand(command) {
+      if (command.name === 'view') {
+        this.crud.toView(command.value)
+      } else if (command.name === 'edit') {
+        this.crud.toEdit(command.value)
+      } else if (command.name === 'del') {
+        this.$confirm('确定删除该条记录吗？', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(() => {
+          this.crud.doDelete(command.value)
+        })
+      }
+    },
+    setImg(path) {
+      return this.baseApi + '/file' + path
+    }
+  }
+}
+</script>

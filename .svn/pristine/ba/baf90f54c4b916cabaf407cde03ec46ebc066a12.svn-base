@@ -1,0 +1,28 @@
+import { mapGetters } from 'vuex'
+import menuMixin from '../mixin/menu'
+import { createMenu } from '../libs/util.menu'
+
+export default {
+  name: 'layout-header-aside-menu-side',
+  mixins: [
+    menuMixin
+  ],
+  render(h) {
+    return <div class='layout-header-aside-menu-side'>
+      <scrollbar>
+        <el-menu
+          collapse={ this.asideCollapse }
+          collapseTransition={ this.asideTransition }
+          uniqueOpened={ true }
+          defaultActive={ this.$route.name }
+          ref='menu'
+          onSelect={ this.handleMenuSelect }>
+          { this.aside.map(menu => createMenu.call(this, h, menu)) }
+        </el-menu>
+      </scrollbar>
+    </div>
+  },
+  computed: {
+    ...mapGetters(['aside', 'asideCollapse', 'asideTransition'])
+  }
+}

@@ -1,0 +1,133 @@
+<template>
+  <div class="page container-component">
+    <div class="container-full">
+      <div class="container-full__body">
+        <div ref="body" class="container-content">
+          <!--工具栏-->
+          <div class="head-container">
+            <!--如果想在工具栏加入更多按钮，可以使用插槽方式， slot = 'left' or 'right'-->
+            <crudOperation :permission="permission" @choose="handleChoose">
+              <template slot="right">
+                <!-- 搜索 -->
+
+              </template>
+            </crudOperation>
+          </div>
+
+          <!--查看表单组件-->
+          <view-dialog :crud="crud" :form="form" :fileList="fileList" :srcList="srcList" />
+
+          <!--编辑表单组件-->
+          <edit-dialog :fileList="fileList" :srcList="srcList" @handleClose="handleClose" />
+
+          <!--列表渲染-->
+          <card-cont v-show="chooseType === 'card'" :crud="crud"></card-cont>
+
+          <!--表格渲染-->
+          <table-cont v-show="chooseType === 'list'" :crud="crud" :maxHeight="tableHeight"></table-cont>
+
+          <!--分页组件-->
+          <pagination />
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import { mapGetters } from 'vuex'
+import crudPlantPickRecords from '@/api/wisdom/plantPickRecords'
+
+import CRUD, { presenter, header, form, crud } from '@crud/crud'
+import crudOperation from '@crud/CRUD.operation'
+import pagination from '@crud/Pagination'
+
+import tableCont from './components/table.vue'
+import cardCont from './components/card.vue'
+import viewDialog from './components/viewDialog.vue'
+import editDialog from './components/editDialog.vue'
+
+const defaultForm = { id: null, plantMassifId: null, plantMassifCode: null, plantMassifName: null, plantBreedId: null, plantBreedIdList: [], plantBreedCode: null, plantBreedName: null, pickWeight: null, pickPersonId: null, pickPersonName: null, pickDate: null, no: null, info: null, status: null, by1: null, by2: null, createBy: null, createTime: null, updateTime: null, orgCompanyId: null, orgCompanyCode: null, orgCompanyName: null, updateBy: null }
+export default {
+  name: 'PlantPickRecords',
+  components: { pagination, crudOperation, tableCont, cardCont, viewDialog, editDialog },
+  mixins: [presenter(), header(), form(defaultForm), crud()],
+  cruds() {
+    return CRUD({ title: '采摘记录', url: 'api/plantPickRecords', idField: 'id', sort: 'date,desc', crudMethod: { ...crudPlantPickRecords } })
+  },
+  data() {
+    return {
+      permission: {
+        add: ['admin', 'plantPickRecords:add'],
+        edit: ['admin', 'plantPickRecords:edit'],
+        del: ['admin', 'plantPickRecords:del']
+      },
+
+      chooseType: 'list',
+      tableHeight: null,
+      fileList: [],
+      srcList: []
+    }
+  },
+  computed: {
+    ...mapGetters(['baseApi'])
+  },
+  mounted() {
+    this.tableHeight = this.$refs.body.offsetHeight - 96
+  },
+  methods: { // 钩子
+    [CRUD.HOOK.beforeToEdit]() {
+      this.form.plantBreedIdList = this.form.plantBreedId.split(',')
+      const arr = []
+      this.form.pidList.map(it => {
+        arr.push({ url: this.baseApi + '/file' + it, response: it })
+      })
+      this.fileList = arr
+    },
+    [CRUD.HOOK.beforeToView]() {
+      const arr = []
+      this.srcList = []
+      this.form.pidList.map(it => {
+        arr.push({ url: this.baseApi + '/file' + it, response: it })
+        this.srcList.push(this.baseApi + '/file' + it)
+      })
+      this.fileList = arr
+    },
+    [CRUD.HOOK.afterSubmit]() {
+      this.clearImage()
+    },
+    clearImage() {
+      this.fileList = []
+    },
+    handleChoose(value) {
+      this.chooseType = value
+    },
+    handleClose() {
+      this.clearImage()
+      this.crud.cancelCU()
+    }
+  }
+}
+</script>
+
+<style>
+.head-container .filter-item input {
+  height: 36px;
+}
+.selectCss {
+  position: relative;
+  left: -7px;
+  top: -4px;
+}
+.selectStyle {
+  position: relative;
+  left: -7px;
+  top: -4px;
+}
+
+.el-input--suffix .el-input__inner {
+  height: 36px;
+  padding-right: 30px;
+}
+</style>
+

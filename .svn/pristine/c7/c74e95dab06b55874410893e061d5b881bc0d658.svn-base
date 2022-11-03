@@ -1,0 +1,175 @@
+<template>
+  <div class="page container-component">
+    <div class="container-full">
+      <div class="container-full__body">
+        <div ref="body" class="container-content">
+          <!--工具栏-->
+          <div class="head-container">
+            <!--如果想在工具栏加入更多按钮，可以使用插槽方式， slot = 'left' or 'right'-->
+            <crudOperation :permission="permission" :viewBar="false"/>
+          </div>
+          <!--编辑表单组件-->
+          <el-dialog :title="crud.status.title" :close-on-click-modal="false" :before-close="handleClose" :visible="crud.status.cu > 0" width="980px">
+            <el-form ref="form" :model="form" :rules="rules" size="small" label-width="80px">
+              <el-upload list-type="picture-card" name="filename" :headers="headers" accept=".jpg,.jpeg,.png,.gif,.bmp,.JPG,.JPEG,.PBG,.GIF,.BMP" :action="baseApi + '/api/plantBreed/uploading'"
+                :on-success="handleAvatarSuccess" :on-remove="handleRemove" :file-list="fileList" :before-upload="beforeAvatarUpload" :limit="1" :class="{disabled: uploadDisabled}">
+                <i class="el-icon-plus" />
+              </el-upload>
+            </el-form>
+            <div slot="footer" class="dialog-footer">
+              <el-button :loading="crud.status.cu === 2" type="primary" @click="handleSubmit">确认</el-button>
+              <el-button @click="crud.cancelCU">取消</el-button>
+            </div>
+          </el-dialog>
+          <!--表格渲染-->
+          <el-table ref="table" v-loading="crud.loading" :data="crud.data" style="width: 100%" @selection-change="crud.selectionChangeHandler" stripe>
+            <el-table-column type="selection" width="55" />
+            <el-table-column label="序号" type="index" width="80" />
+            <el-table-column prop="labelAdress" label="标签">
+              <template slot-scope="scope">
+                <img style="width: 70px; height: 70px" :src="ip + scope.row.labelAdress" />
+              </template>
+            </el-table-column>
+            <el-table-column prop="size" label="尺寸" />
+            <el-table-column prop="updateTime" label="时间" sortable />
+            <el-table-column v-if="
+                checkPer([
+                  'admin',
+                  'plantSypzCodeType:edit',
+                  'plantSypzCodeType:del',
+                ])
+              " label="操作" width="220px" align="center">
+              <template slot-scope="scope">
+                <udOperation :data="scope.row" :permission="permission" />
+              </template>
+            </el-table-column>
+          </el-table>
+          <!--分页组件-->
+          <pagination />
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import { mapGetters } from "vuex";
+import crudPlantSypzCodeType from "@/api/source/plantSypzCodeType";
+import CRUD, { presenter, header, form, crud } from "@crud/crud";
+import { getToken } from "@/utils/auth";
+import crudOperation from "@crud/CRUD.operation";
+import udOperation from "@crud/UD.operation";
+import pagination from "@crud/Pagination";
+
+const defaultForm = {
+  id: null,
+  labelAdress: null,
+  size: null,
+  createBy: null,
+  createTime: null,
+  updateBy: null,
+  updateTime: null,
+  ord: null,
+  status: null,
+  info: null,
+  by1: null,
+  by2: null,
+};
+let imageArr = "";
+export default {
+  name: "PlantSypzCodeType",
+  components: { pagination, crudOperation, udOperation },
+  mixins: [presenter(), header(), form(defaultForm), crud()],
+  cruds() {
+    return CRUD({
+      title: "溯源码样式管理",
+      url: "api/plantSypzCodeType",
+      idField: "id",
+      sort: "id,desc",
+      crudMethod: { ...crudPlantSypzCodeType },
+    });
+  },
+  data() {
+    return {
+      permission: {
+        add: ["admin", "plantSypzCodeType:add"],
+        edit: ["admin", "plantSypzCodeType:edit"],
+        del: ["admin", "plantSypzCodeType:del"],
+      },
+      headers: {
+        Authorization: getToken(),
+      },
+      rules: {},
+      fileList: [],
+      ip: null,
+      uploadDisabled: false
+    };
+  },
+  computed: {
+    ...mapGetters(["baseApi"]),
+  },
+  mounted() {
+    this.ip = this.baseApi + "/file";
+  },
+  methods: {
+    [CRUD.HOOK.beforeToEdit]() {
+      const arr = [];
+      arr.push({
+        url: this.baseApi + "/file" + this.form.labelAdress,
+        response: this.form.labelAdress,
+      });
+      this.fileList = arr;
+      imageArr = this.form.labelAdress;
+      this.uploadDisabled = true
+    },
+    [CRUD.HOOK.beforeToAdd]() {
+      imageArr = "";
+      this.fileList = [];
+      this.uploadDisabled = false
+    },
+    [CRUD.HOOK.afterSubmit]() {
+      this.clearImage();
+    },
+    clearImage() {
+      imageArr = "";
+      this.fileList = [];
+    },
+    handleAvatarSuccess(res, file) {
+      imageArr = res;
+      this.form.labelAdress = imageArr;
+      this.uploadDisabled = true
+    },
+    handleRemove(file, fileList) {
+      imageArr = "";
+      this.uploadDisabled = false
+    },
+    beforeAvatarUpload(file) {
+      const isJPG = file.type.indexOf("image") !== -1;
+      if (!isJPG) {
+        this.$message.error("请上传图片！");
+      }
+      return isJPG;
+    },
+    handleClose() {
+      this.clearImage();
+      this.crud.cancelCU();
+    },
+    handleSubmit() {
+      if (imageArr === '') {
+        this.$message.warning("请上传图片！")
+        return
+      }
+      this.crud.submitCU()
+    }
+  },
+};
+</script>
+
+
+<style lang="scss" scoped>
+.disabled {
+  :deep(.el-upload.el-upload--picture-card) {
+    display: none !important;
+  }
+}
+</style>

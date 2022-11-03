@@ -1,0 +1,43 @@
+<template>
+  <el-dialog class="view-dialog"  :close-on-click-modal="false" :before-close="crud.closeView" :visible="crud.status.view" width="960px">
+    <div slot="title" class="el-dialog__title">
+      <div><span>{{ crud.status.title }}</span> - <span>{{ form.plantManagementCode }}</span></div>
+    </div>
+
+    <el-form ref="form" :inline="true" :model="form" label-width="120px">
+      <el-form-item label="地块">
+        <div style="width: 160px;">{{ form.plantMassifName }}</div>
+      </el-form-item>
+      <el-form-item label="品种">
+        <div style="width: 160px;">{{ form.plantBreedName }}</div>
+      </el-form-item>
+      <el-form-item label="种植规模">
+        <div style="width: 160px;">{{ form.plantSize }}</div>
+      </el-form-item>
+      <el-form-item label="生长周期(天)">
+        <div style="width: 160px;">{{ form.growthCycle }}</div>
+      </el-form-item>
+      <el-form-item label="种植时间">
+        <div style="width: 160px;">{{ parseTime(form.plantDate,'{y}-{m}-{d}') }}</div>
+      </el-form-item>
+      <div>
+        <el-form-item label="备注">
+          <div style="width: 700px;">{{ form.info }}</div>
+        </el-form-item>
+      </div>
+    </el-form>
+  </el-dialog>
+</template>
+
+<script>
+import { parseTime } from '@/utils/index'
+export default {
+  props:{
+    crud: Object,
+    form: Object
+  },
+  methods: {
+    parseTime
+  }
+}
+</script>

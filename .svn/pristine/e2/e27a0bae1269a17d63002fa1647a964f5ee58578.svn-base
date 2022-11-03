@@ -1,0 +1,76 @@
+<template>
+  <div class="cardFlex">
+    <el-card v-for="(item, index) in crud.data" :key="index" shadow="hover" class="card" @click.native="crud.toView(item)">
+      <span @click.stop>
+        <el-dropdown trigger="click" placement="bottom" class="card-more" @command="handleCommand">
+          <span class="el-dropdown-link">
+            <el-button slot="reference" icon="el-icon-alimore" type="more" />
+          </span>
+          <el-dropdown-menu slot="dropdown">
+            <el-dropdown-item icon="el-icon-alipreview" :command="{ name: 'view', value: item }">查看</el-dropdown-item>
+            <el-dropdown-item v-permission="['admin', 'plantSyProduct:edit']" icon="el-icon-aliedit" :command="{ name: 'edit', value: item }">编辑</el-dropdown-item>
+            <el-dropdown-item v-permission="['admin', 'plantSyProduct:del']" icon="el-icon-alidel" :command="{ name: 'del', value: item}">删除</el-dropdown-item>
+            <el-dropdown-item icon="el-icon-alipreview" :command="{ name: 'data', value: item}">新增批次</el-dropdown-item>
+          </el-dropdown-menu>
+        </el-dropdown>
+      </span>
+
+      <div class="title titleName">{{ item.productCode }}</div>
+      <div class="flex wrap">
+        <div style="width:80%;">
+          <div class="wrap titleName"><span class="tip">产品名称</span><span class="name">{{ item.productName }}</span></div>
+          <div class="wrap"><span class="tip">品种名称</span>{{ item.plantBreedName }}</div>
+        </div>
+        <img v-if="item.picList&&item.picList.length>0" :src="setImg(item.picList[0])" class="img">
+      </div>
+      <div class="wrap titleName"><span class="tip">所属企业</span><span class="name">{{ item.cyyImplementationsName }}</span></div>
+      <div class="wrap"><span class="tip">操作时间</span>{{ item.updateTimeStr }}</div>
+    </el-card>
+  </div>
+</template>
+
+<script>
+import { mapGetters } from 'vuex'
+
+export default {
+  props: {
+    crud: {
+      type: Object,
+      default: () => {}
+    }
+  },
+  computed: {
+    ...mapGetters(['baseApi'])
+  },
+  methods: {
+    handleCommand(command) {
+      if (command.name === 'view') {
+        this.crud.toView(command.value)
+      } else if (command.name === 'edit') {
+        this.crud.toEdit(command.value)
+      } else if (command.name === 'del') {
+        this.$confirm('确定删除该条记录吗？', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(() => {
+          this.crud.doDelete(command.value)
+        })
+      } else if (command.name === 'data') {
+        this.$emit('handleAddBatch', command.value)
+      }
+    },
+    setImg(path) {
+      return this.baseApi + '/file' + path
+    }
+  }
+}
+</script>
+<style lang="scss" scoped>
+.titleName {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  width: 94%;
+}
+</style>

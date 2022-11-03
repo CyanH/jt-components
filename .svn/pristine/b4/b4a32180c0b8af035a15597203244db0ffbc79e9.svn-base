@@ -1,0 +1,91 @@
+<template>
+  <div class="page container-component">
+    <div class="container-full">
+      <div class="container-full__body">
+        <div ref="body" class="container-content">
+          <!--工具栏-->
+          <div class="head-container">
+            <!--如果想在工具栏加入更多按钮，可以使用插槽方式， slot = 'left' or 'right'-->
+            <crudOperation :permission="permission" @choose="handleChoose">
+              <template slot="right">
+                <!-- 搜索 -->
+                <el-input
+                  v-model="query.PlantMassifName"
+                  prefix-icon="el-icon-alisearch"
+                  clearable
+                  placeholder="请输入搜索内容"
+                  style="width: 280px;"
+                  class="filter-item"
+                  @keyup.enter.native="crud.toQuery"
+                  @clear="crud.toQuery"
+                />
+              </template>
+            </crudOperation>
+          </div>
+
+          <!--查看表单组件-->
+          <view-dialog />
+
+          <!--编辑表单组件-->
+          <edit-dialog />
+
+          <!--列表渲染-->
+          <card-cont v-show="chooseType === 'card'" :crud="crud" />
+
+          <!--表格渲染-->
+          <table-cont v-show="chooseType === 'list'" :crud="crud" :max-height="tableHeight" />
+
+          <!--分页组件-->
+          <pagination />
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import { mapGetters } from 'vuex'
+import crudPlantPickRecords from '@/api/wisdom/plantPickRecords'
+
+import CRUD, { presenter, header, crud } from '@crud/crud'
+import crudOperation from '@crud/CRUD.operation'
+import pagination from '@crud/Pagination'
+
+import tableCont from './components/table.vue'
+import cardCont from './components/card.vue'
+import viewDialog from './components/viewDialog.vue'
+import editDialog from './components/editDialog.vue'
+
+export default {
+  name: 'PlantPickRecords',
+  components: { pagination, crudOperation, tableCont, cardCont, viewDialog, editDialog },
+  mixins: [presenter(), header(), crud()],
+  cruds() {
+    return CRUD({ title: '采摘记录', url: 'api/plantPickRecords', idField: 'id', sort: 'date,desc', crudMethod: { ...crudPlantPickRecords }})
+  },
+  data() {
+    return {
+      permission: {
+        add: ['admin', 'plantPickRecords:add'],
+        edit: ['admin', 'plantPickRecords:edit'],
+        del: ['admin', 'plantPickRecords:del']
+      },
+
+      chooseType: 'list',
+      tableHeight: null
+    }
+  },
+  computed: {
+    ...mapGetters(['baseApi'])
+  },
+  mounted() {
+    this.tableHeight = this.$refs.body.offsetHeight - 138
+  },
+  methods: { // 钩子
+    handleChoose(value) {
+      this.chooseType = value
+    }
+  }
+}
+</script>
+

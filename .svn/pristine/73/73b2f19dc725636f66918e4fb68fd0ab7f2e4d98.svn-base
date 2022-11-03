@@ -1,0 +1,332 @@
+<template>
+  <div>
+    <el-row :gutter="20">
+      <el-col :span="4">
+        <div class="circle">
+          <count-to :start-val="0" :end-val="pond" :duration="2600" class="card-panel-num" />
+          <div class="name">塘口</div>
+        </div>
+        <div class="kuang">
+          <icon-svg name="pool" class="icons" style="fill:rgb(84, 151, 252);margin:0 auto; padding-left:7px;padding-top:7px" />
+        </div>
+      </el-col>
+      <el-col :span="4">
+        <div class="circle">
+          <count-to :start-val="0" :end-val="equipment" :duration="2600" class="card-panel-num" />
+          <div class="name">塘口设备</div>
+        </div>
+        <div class="kuang">
+          <icon-svg name="equip" class="icons" style="fill:rgb(84, 151, 252);margin:0 auto; padding-left:7px;padding-top:7px" />
+        </div>
+      </el-col>
+      <el-col :span="4">
+        <div class="circle">
+          <count-to :start-val="0" :end-val="area" :duration="2600" class="card-panel-num" />
+          <div class="name">水域面积</div>
+        </div>
+        <div class="kuang">
+          <icon-svg name="area" class="icons" style="fill:rgb(84, 151, 252);margin:0 auto; padding-left:7px;padding-top:7px" />
+        </div>
+      </el-col>
+      <el-col :span="4">
+        <div class="circle">
+          <count-to :start-val="0" :end-val="sell" :duration="2600" class="card-panel-num" />
+          <div class="name">销售数量</div>
+        </div>
+        <div class="kuang">
+          <icon-svg name="xsrecord" class="icons" style="fill:rgb(84, 151, 252);margin:0 auto; padding-left:7px;padding-top:7px" />
+        </div>
+      </el-col>
+      <el-col :span="4">
+        <div class="circle">
+          <count-to :start-val="0" :end-val="warning" :duration="2600" class="card-panel-num" />
+          <div class="name">预警数量</div>
+        </div>
+        <div class="kuang">
+          <icon-svg name="warning" class="icons" style="fill:rgb(84, 151, 252);margin:0 auto; padding-left:7px;padding-top:7px" />
+        </div>
+      </el-col>
+    </el-row>
+    <br>
+    <el-tabs @tab-click="handleClick">
+      <el-tab-pane v-for="item in tabList" :key="item.id" :label="item.name" :name="item.id" />
+    </el-tabs>
+
+    <div class="bian">
+      <div class="lefts" style="background:rgb(111, 137, 246);border:rgb(111, 137, 246)">
+        <icon-svg name="temp" class="icon" />
+      </div>
+      <div class="rights">
+        <p style="font-size: 20px;margin-top: 20px;margin-bottom: 0px;margin-left:80px">
+          {{ water }}
+        </p>
+        <span style="margin-left:75px">
+          温度(°C)
+        </span>
+        <p style="margin-top: 0px;margin-bottom: 18px; color:#fff">.</p>
+      </div>
+    </div>
+    <div class="bian">
+      <div class="lefts" style="background:rgb(71, 212, 146);border:rgb(71, 212, 146)">
+        <icon-svg name="dissolved" class="icon" />
+      </div>
+      <div class="rights">
+        <p style="font-size: 20px;margin-top: 20px;margin-bottom: 0px;margin-left:80px">
+          {{ oxygen }}
+        </p>
+        <span style="margin-left:70px">
+          溶解氧(mg/L)
+        </span>
+        <p style="margin-top: 0px;margin-bottom: 18px; color:#fff">.</p>
+      </div>
+    </div>
+    <div class="bian">
+      <div class="lefts" style="background:rgb(127, 87, 245);border:rgb(127, 87, 245)">
+        <icon-svg name="water" class="icon" />
+      </div>
+      <div class="rights">
+        <p style="font-size: 20px;margin-top: 20px;margin-bottom: 0px;;margin-left:80px">
+          {{ ph }}
+        </p>
+        <span style="margin-left:95px">
+          pH
+        </span>
+        <p style="margin-top: 0px;margin-bottom: 18px; color:#fff">.</p>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import CountTo from 'vue-count-to'
+// import wlwWaterData from '@/api/data/wlwWaterData'
+// import manage from '@/api/source/manage'
+
+export default {
+  components: {
+    CountTo
+  },
+  data() {
+    return {
+      tabList: [],
+      pond: '', // 塘口
+      equipment: '', // 设备
+      area: '', // 面积
+      sell: '', // 销售
+      warning: '', // 预警
+      farmPondId: '',
+      water: '',
+      oxygen: '',
+      ph: ''
+    }
+  },
+  created() {
+    this.getData()
+  },
+  methods: {
+    getData() {
+      manage.getFarmPond().then(res => {
+        this.tabList = res.content
+        this.farmPondId = res.content[0].id
+      })
+      wlwWaterData.getByAll().then(res => {
+        this.pond = res.塘口
+        this.equipment = res.关联设备
+        this.area = res.水域面积
+        this.sell = res.销售数量
+        this.warning = res.预警数量
+      })
+
+      this.timer = setTimeout(() => { // 设置延迟执行
+        // 通过塘口id查询出最新的一条数据
+        wlwWaterData.getByPondIdAndDate({ pondId: this.farmPondId }).then(res => {
+          this.water = res.content.water
+          this.oxygen = res.content.oxygen
+          this.ph = res.content.ph
+        })
+      }, 1000)
+    },
+    handleSetLineChartData(type) {
+      this.$emit('handleSetLineChartData', type)
+    },
+    handleClick(tab, event) {
+      wlwWaterData.getByPondIdAndDate({ pondId: tab.name }).then(res => {
+        this.water = res.content.water
+        this.oxygen = res.content.oxygen
+        this.ph = res.content.ph
+      })
+      this.handleSetLineChartData(tab.name)
+    }
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+.el-row {
+    margin-bottom: 20px;
+    display: flex;
+    flex-wrap: wrap
+  }
+
+.el-col {
+    height: 100px;
+    border-radius: 5px;
+    background: white;
+    margin-right: 20px;
+    transition: all .5s;
+  }
+.circle .name {
+  position: relative;
+  top: 35px;
+  left: 10px;
+  color: rgb(147, 152, 159);
+}
+.card-panel-num {
+  font-size: 30px;
+  font-weight: bold;
+  position: relative;
+  top: 15px;
+  left: 10px;
+}
+.kuang {
+  border-radius:15px;
+  width: 70px;
+  height: 70px;
+  background: rgb(221,234,254);
+  position: relative;
+  bottom: 38px;
+  left: 210px;
+}
+
+.bian{
+  border-radius: 50%;
+  width: 360px;
+  height: 110px;
+  margin-left: 50px;
+  margin-right: 200px;
+  display: inline-block;
+}
+.bian .lefts{
+  background: rgb(255,197,61);
+  width: 39%;
+  height: 83px;
+  border-top-left-radius: 5%;
+  border-bottom-left-radius: 5%;
+  border:  rgb(255,197,61);
+  display: inline-block;
+}
+
+.bian .rights{
+  background: white;
+  width: 59%;
+  height: 82px;
+  border-top-right-radius: 5%;
+  border-bottom-right-radius: 5%;
+  border: 1px solid rgb(187, 187, 187);
+  display: inline-block;
+  border-left: 0px;
+}
+
+.svg-icon[data-v-2f5ffda3] {
+  width: 3.5em;
+  height: 3.5em;
+  margin-left: 40px;
+  margin-top: 20px;
+  fill: white;
+  overflow: hidden;
+
+}
+
+.panel-group {
+  margin-top: 18px;
+
+  .card-panel-col {
+    margin-bottom: 32px;
+  }
+
+  .card-panel {
+    height: 108px;
+    cursor: pointer;
+    font-size: 12px;
+    position: relative;
+    overflow: hidden;
+    color: #666;
+    background: #fff;
+    box-shadow: 4px 4px 40px rgba(0, 0, 0, .05);
+    border-color: rgba(0, 0, 0, .05);
+
+    &:hover {
+      .card-panel-icon-wrapper {
+        color: #fff;
+      }
+
+      .icon-people {
+        background: #40c9c6;
+      }
+
+      .icon-message {
+        background: #36a3f7;
+      }
+
+      .icon-money {
+        background: #f4516c;
+      }
+
+      .icon-shopping {
+        background: #34bfa3
+      }
+    }
+
+    .icon-people {
+      color: #40c9c6;
+    }
+
+    .icon-message {
+      color: #36a3f7;
+    }
+
+    .icon-money {
+      color: #f4516c;
+    }
+
+    .icon-shopping {
+      color: #34bfa3
+    }
+
+    .card-panel-description {
+      float: right;
+      font-weight: bold;
+      margin: 26px;
+      margin-left: 0px;
+
+      .card-panel-text {
+        line-height: 18px;
+        color: rgba(0, 0, 0, 0.45);
+        font-size: 16px;
+        margin-bottom: 12px;
+      }
+
+      .card-panel-num {
+        font-size: 20px;
+      }
+    }
+  }
+
+}
+::v-deep .el-tabs__item{
+  font-size: 20px;
+}
+
+@media (max-width:550px) {
+  .card-panel-description {
+    display: none;
+  }
+
+  .card-panel-icon-wrapper {
+    float: none !important;
+    width: 100%;
+    height: 100%;
+    margin: 0 !important;
+  }
+}
+</style>

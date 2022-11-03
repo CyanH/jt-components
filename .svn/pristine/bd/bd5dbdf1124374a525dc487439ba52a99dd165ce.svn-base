@@ -1,0 +1,640 @@
+<template>
+  <div class="page container-component">
+    <div class="container-full">
+      <div class="container-full__body">
+        <div ref="body" class="container-content">
+          <!--工具栏-->
+          <div class="head-container">
+            <!--如果想在工具栏加入更多按钮，可以使用插槽方式， slot = 'left' or 'right'-->
+            <crudOperation :permission="permission" @choose="handleChoose">
+              <template slot="right">
+                <!-- 搜索 -->
+                <el-input v-model="query.plantBreedName" prefix-icon="el-icon-alisearch" clearable placeholder="输入品种名称搜索" style="width: 280px;" class="filter-item" @keyup.enter.native="crud.toQuery" />
+                <el-input v-model="query.plantMassifName" prefix-icon="el-icon-alisearch" clearable placeholder="输入地块名称搜索" style="width: 280px;" class="filter-item" @keyup.enter.native="crud.toQuery" />
+              </template>
+            </crudOperation>
+          </div>
+
+          <!--查看表单组件-->
+          <el-dialog class="view-dialog" :fullscreen="fullscreenView" :close-on-click-modal="false" :before-close="crud.closeView" :visible="crud.status.view" width="960px">
+            <div slot="title" class="el-dialog__title">
+              <div>
+                <span>{{ crud.status.title }}</span> -
+                <span>{{ code }}</span>
+              </div>
+              <el-button class="dialog-fullscreen" :icon="fullscreenView? 'el-icon-aliexitfullscreen':'el-icon-alifullscreen'" type="text" @click="fullscreenView = !fullscreenView" />
+            </div>
+
+            <el-form ref="form" :inline="true" :model="form" label-width="120px">
+              <el-form-item label="地块">
+                <div style="width: 160px;">{{ form.plantMassifName }}</div>
+              </el-form-item>
+              <el-form-item label="品种">
+                <div style="width: 160px;">{{ form.plantBreedName }}</div>
+              </el-form-item>
+              <el-form-item label="规格(箱)">
+                <div style="width: 160px;">{{ form.spec }}</div>
+              </el-form-item>
+              <el-form-item label="数量">
+                <div style="width: 160px;">{{ form.amount }}</div>
+              </el-form-item>
+              <el-form-item label="价格(元)">
+                <div style="width: 160px;">{{ form.price }}</div>
+              </el-form-item>
+              <el-form-item label="溯源码数量">
+                <div style="width: 160px;">{{ form.syCodeAmount }}</div>
+              </el-form-item>
+              <el-form-item label="保质期(天)">
+                <div style="width: 160px;">{{ form.expirationDate }}</div>
+              </el-form-item>
+              <el-form-item label="生产日期">
+                <div style="width: 160px;">{{ parseTime(form.productionDate,'{y}-{m}-{d}') }}</div>
+              </el-form-item>
+              <el-form-item label="采集开始时间">
+                <div style="width: 160px;">{{ parseTime(form.pickStartDate,'{y}-{m}-{d}') }}</div>
+              </el-form-item>
+              <el-form-item label="采集结束时间">
+                <div style="width: 160px;">{{ parseTime(form.pickEndDate,'{y}-{m}-{d}') }}</div>
+              </el-form-item>
+              <el-form-item label="报告类别">
+                <el-radio-group v-model="radio1" style="margin-left:50px" @change="agreeChange">
+                  <el-radio-button v-for="item in dictList" :key="item.id" type="success" style="margin-top:10px" :label="item.value" plain>{{ item.label }}</el-radio-button>
+                </el-radio-group>
+              </el-form-item>
+
+              <div>
+                <el-image v-for="(item,index) in fileList" :key="index" class="view-image" :src="item.url" :preview-src-list="srcList" />
+              </div>
+            </el-form>
+          </el-dialog>
+
+          <!-- 生成溯源码 -->
+          <el-dialog title="生成溯源码" :visible.sync="dialogVisible" width="50%" :before-close="handleClose">
+
+            <div class="circle">
+              <ul class="circle-ul">
+                <li v-for="(item) of classList" :key="item.id" class="circle-li">
+                  <div :class="{changeBorder:item==a}" value="change!" @click="changeList(item)">
+                    <img :src="item" style="width: 100px;height: 100px;padding-top: 5px;" alt>
+                    <div class="topic-shade">
+                      <!-- <div class="shade"><img src="item" style="width: 14px;height: 14px;" alt /></div> -->
+                    </div>
+                  </div>
+                </li>
+              </ul>
+            </div>
+            <div style="margin-left:60px">
+              <span style="font-weight: bold;">填写信息 </span>
+              <span style="font-weight: bold;color:rgb(159, 156, 158);"> (已生成{{ this.shengxia }}个溯源码, 还可生成{{ this.zongshu }}个)</span>
+            </div>
+            <br>
+            <el-form ref="form" :inline="true" :model="sourceForm" :rules="rul" label-width="100px">
+
+              <el-form-item label="数量" prop="sum">
+                <el-input v-model="sourceForm.amount" style="width: 280px;" />
+              </el-form-item>
+            </el-form>
+
+            <span slot="footer" class="dialog-footer">
+              <el-button type="primary" @click="sourceSub">确 定</el-button>
+              <el-button @click="sourceBtn">取 消</el-button>
+            </span>
+          </el-dialog>
+
+          <!--编辑表单组件-->
+          <el-dialog :fullscreen="fullscreen" :close-on-click-modal="false" :before-close="handleClose" :visible="crud.status.cu > 0" width="980px">
+            <div slot="title" class="el-dialog__title">
+              <span>{{ crud.status.title }}</span>
+              <el-button class="dialog-fullscreen" :icon="fullscreen? 'el-icon-aliexitfullscreen':'el-icon-alifullscreen'" type="text" @click="fullscreen = !fullscreen" />
+            </div>
+
+            <el-form ref="form" :inline="true" :model="form" :rules="rules" label-width="115px">
+              <el-form-item label="产　品" prop="productId">
+                <el-select v-model="form.productId" placeholder="请选择" style="width: 180px;" @change="productChange(form.productId)">
+                  <el-option v-for="item in productList" :key="item.id" :label="item.productName" :value="item.id" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="品　种" prop="plantBreedName">
+                <el-select v-model="form.plantBreedName" placeholder="请选择" style="width: 180px;" @change="plantBreedChange(form.plantBreedName)">
+                  <el-option v-for="item in typeList" :key="item.plantBreedId" :label="item.plantBreedName" :value="item.plantBreedName" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="地　块" prop="plantMassifName">
+                <el-select v-model="form.plantMassifName" placeholder="请选择" style="width: 180px;" @change="handleChange">
+                  <el-option v-for="item in pondList" :key="item.id" :label="item.plantMassifName" :value="item.plantMassifName" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="批次编号" prop="batchNo">
+                <el-input v-model="form.batchNo" disabled style="width: 180px;" />
+              </el-form-item>
+              <el-form-item label="规格(箱)" prop="spec">
+                <el-input v-model="form.spec" onkeyup="value=value.match(/\d+\.?\d{0,0}/)" style="width: 180px;" />
+              </el-form-item>
+              <el-form-item label="数　量" prop="amount">
+                <el-input v-model="form.amount" onkeyup="value=value.match(/\d+\.?\d{0,0}/)" style="width: 180px;" />
+              </el-form-item>
+              <el-form-item label="价格(元)" prop="price">
+                <el-input v-model="form.price" onkeyup="value=value.match(/\d+\.?\d{0,2}/)" style="width: 180px;" />
+              </el-form-item>
+              <el-form-item label="生产日期" prop="productionDate">
+                <el-date-picker v-model="form.productionDate" value-format="yyyy-MM-dd" type="date" placeholder="选择日期" style="width: 180px;" />
+              </el-form-item>
+              <el-form-item label="保质期(天)" prop="expirationDate">
+                <el-input v-model="form.expirationDate" onkeyup="value=value.match(/\d+\.?\d{0,0}/)" style="width: 180px;" />
+              </el-form-item>
+              <el-form-item label="溯源码数量" prop="syCodeAmount">
+                <el-input v-model="form.syCodeAmount" onkeyup="value=value.match(/\d+\.?\d{0,0}/)" style="width: 180px;" />
+              </el-form-item>
+              <el-form-item label="采集开始时间" prop="pickStartDate">
+                <el-date-picker v-model="form.pickStartDate" value-format="yyyy-MM-dd" type="date" placeholder="选择日期" style="width: 180px;" />
+              </el-form-item>
+
+              <el-form-item label="采集结束时间" prop="pickEndDate">
+                <el-date-picker v-model="form.pickEndDate" value-format="yyyy-MM-dd" type="date" placeholder="选择日期" style="width: 180px;" />
+              </el-form-item>
+              <el-button v-if="flag" style="float:right; margin-right:15px" size="mini" @click="custom">自定义报告类别</el-button>
+              <div>
+                <el-radio-group v-model="radio1" style="margin-left:50px" @change="agreeChange">
+                  <el-radio-button v-for="item in dictList" :key="item.id" type="success" style="margin-top:10px" :label="item.value" plain>{{ item.label }}</el-radio-button>
+                </el-radio-group>
+              </div>
+              <br>
+              <el-form-item style="margin-left:50px" prop="reportType">
+                <el-input v-model="form.dictLabel" 　placeholder="请输入自定义类别名称" :style="{display:visibleCancel}" style="width: 180px;" />
+              </el-form-item>
+              <el-button type="primary" :style="{display:visibleCancel}" @click="subDict">新增</el-button>
+
+              <br><br>
+              <div style="padding-left:115px">
+                <el-upload list-type="picture-card" name="filename" :headers="headers" accept=".jpg,.jpeg,.png,.gif,.bmp,.JPG,.JPEG,.PBG,.GIF,.BMP" :action="baseApi+ '/api/plantBreed/uploading'"
+                  :on-success="handleAvatarSuccess" :on-remove="handleRemove" :file-list="fileList" :before-upload="beforeAvatarUpload">
+                  <i class="el-icon-plus" />
+                </el-upload>
+              </div>
+
+            </el-form>
+            <div slot="footer" class="dialog-footer">
+              <el-button :loading="crud.status.cu === 2" type="primary" @click="batchSub">确认</el-button>
+              <el-button @click="crud.cancelCU">取消</el-button>
+            </div>
+          </el-dialog>
+
+          <!--列表渲染-->
+          <div v-show="chooseType === 'card'" class="cardFlex">
+            <el-card v-for="(item, index) in crud.data" :key="index" shadow="hover" class="card" @click.native="crud.toView(item)">
+              <span @click.stop>
+                <el-dropdown trigger="click" placement="bottom" class="card-more" @command="handleCommand">
+                  <span class="el-dropdown-link">
+                    <el-button slot="reference" icon="el-icon-alimore" type="more" />
+                  </span>
+                  <el-dropdown-menu slot="dropdown">
+                    <el-dropdown-item icon="el-icon-alipreview" :command="{ name: 'view', value: item }">查看</el-dropdown-item>
+                    <el-dropdown-item v-permission="['admin', 'plantSyBatch:edit']" icon="el-icon-aliedit" :command="{ name: 'edit', value: item }">编辑</el-dropdown-item>
+                    <el-dropdown-item v-permission="['admin', 'plantSyBatch:del']" icon="el-icon-alidel" :command="{ name: 'del', value: item }">删除</el-dropdown-item>
+                  </el-dropdown-menu>
+                </el-dropdown>
+              </span>
+
+              <div class="title">{{ item.batchNo }}</div>
+              <div class="wrap"><span class="tip">产品名称：</span>{{ item.productName }}</div>
+              <div class="wrap"><span class="tip">品种名称：</span>{{ item.plantMassifName }}</div>
+              <div class="wrap"><span class="tip">种植地块：</span>{{ item.plantBreedName }}</div>
+              <div class="wrap"><span class="tip">规格(箱)：</span>{{ item.spec }}</div>
+              <div class="wrap"><span class="tip">生产日期</span>：{{ parseTime(item.productionDate,'{y}-{m}-{d}') }}</div>
+            </el-card>
+          </div>
+
+          <!--表格渲染-->
+          <table-cont v-show="chooseType === 'list'" :crud="crud" :maxHeight="tableHeight" @createSource="createSource"></table-cont>
+
+          <!--分页组件-->
+          <pagination />
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import { mapGetters } from 'vuex'
+import { getToken } from '@/utils/auth'
+import crudPlantSyBatch from '@/api/source/plantSyBatch'
+import { select } from '@/api/source/plantSyProduct'
+import { getAmount, add } from '@/api/source/plantSyjl'
+import { getByPlantBreedId } from '@/api/wisdom/plantManagement'
+import { getselect } from '@/api/source/plantSypzCodeType'
+
+import CRUD, { presenter, header, form, crud } from '@crud/crud'
+import crudOperation from '@crud/CRUD.operation'
+import pagination from '@crud/Pagination'
+import DateRangePicker from '@/components/DateRangePicker'
+
+import tableCont from './components/table.vue'
+
+const defaultForm = { id: null, batchNo: null, productCode: null, productName: null, productId: null, plantMassifId: null, plantMassifCode: null, plantMassifName: null, reportType: null, plantBreedId: null, plantBreedName: null, plantBreedCode: null, spec: null, amount: null, price: null, productionDate: null, expirationDate: null, syCodeAmount: null, pickStartDate: null, pickEndDate: null, info: null, status: null, by1: null, by2: null, createBy: null, createTime: null, updateTime: null, orgCompanyId: null, orgCompanyCode: null, orgCompanyName: null, updateBy: null }
+let imageArr = []
+const data = []
+const temporary = []
+export default {
+  name: 'PlantSyBatch',
+  components: { pagination, crudOperation, DateRangePicker, tableCont },
+  mixins: [presenter(), header(), form(defaultForm), crud()],
+  cruds() {
+    return CRUD({ title: '溯源批次', url: 'api/plantSyBatch', idField: 'id', sort: 'date,desc', crudMethod: { ...crudPlantSyBatch } })
+  },
+  data() {
+    return {
+      permission: {
+        add: ['admin', 'plantSyBatch:add'],
+        edit: ['admin', 'plantSyBatch:edit'],
+        del: ['admin', 'plantSyBatch:del']
+      },
+      headers: {
+        Authorization: getToken()
+      },
+
+      rules: {
+        productId: [{ required: true, message: '请选择产品', trigger: 'change' }],
+        plantMassifName: [{ required: true, message: '请选择地块', trigger: 'change' }],
+        plantBreedName: [{ required: true, message: '请选择品种', trigger: 'change' }],
+        spec: [{ required: true, message: '请输入规格', trigger: 'blur' }],
+        amount: [{ required: true, message: '请输入数量', trigger: 'blur' }],
+        price: [{ required: true, message: '请输入价格', trigger: 'blur' }],
+        productionDate: [{ required: true, message: '请输入生产日期', trigger: 'blur' }],
+        expirationDate: [{ required: true, message: '请输入保质期', trigger: 'blur' }],
+        syCodeAmount: [{ required: true, message: '请输入溯源码数量', trigger: 'blur' }],
+        pickStartDate: [{ required: true, message: '请输入采集开始时间', trigger: 'blur' }],
+        pickEndDate: [{ required: true, message: '请输入采集结束时间', trigger: 'blur' }]
+      },
+      rul: {
+        sum: [{ required: true, message: '请输入数量', trigger: 'blur' }]
+      },
+      typeList: [],
+      pondList: [],
+      chooseType: 'list',
+      fullscreenView: false,
+      fullscreen: false,
+      tableHeight: null,
+      fileList: [],
+      srcList: [],
+      code: '',
+      productList: [],
+      dictList: [],
+      dialogVisible: false,
+      a: true,
+      classList: [],
+      shengxia: null,
+      zongshu: null,
+      radio1: 0,
+      flag: true, // 点击自定义检测报告默认值
+      batchId: null, // 批次id
+      batchName: null, // 批次code
+      visibleCancel: 'none', // 自定义类型输入框显示
+      sourceForm: { id: null, syCode: null, syBatchId: null, dictLabel: null, batchNo: null, syCodeTypeId: null, date: null, amount: null, isOkNumber: null, scanNumber: null, info: null, createTime: null, syUser: null }
+    }
+  },
+  computed: {
+    ...mapGetters(['baseApi'])
+
+  },
+  mounted() {
+    this.tableHeight = this.$refs.body.offsetHeight - 138
+    this.getData()
+  },
+  methods: { // 钩子
+    [CRUD.HOOK.beforeToEdit]() {
+      alert(this.form.id)
+      var imgList = []
+      for (var i = 0; i < this.form.pidList.length; i++) {
+        const resdata = JSON.parse(JSON.stringify(this.form.pidList[i]))
+        temporary.push(resdata)
+      }
+
+      console.log(temporary)
+
+      for (var i = 0; i < this.form.pidList.length; i++) {
+        const resdata = JSON.parse(JSON.stringify(this.form.pidList[0]))
+        temporary.push(resdata)
+        imgList.push(resdata.address)
+        this.form.reportType = resdata.reportType
+        console.log(imgList)
+        alert(this.form.reportType)
+        break
+      }
+
+      const arr = []
+      imgList.map(it => {
+        arr.push({ url: this.baseApi + '/file' + it, response: it })
+      })
+      this.fileList = arr
+      // imageArr = this.form.pidList
+      imageArr = imgList
+    },
+    [CRUD.HOOK.beforeToView]() {
+      this.code = this.form.batchNo
+
+      var imgList = []
+      for (var i = 0; i < this.form.pidList.length; i++) {
+        const resdata = JSON.parse(JSON.stringify(this.form.pidList[0]))
+        temporary.push(resdata)
+        imgList.push(resdata.address)
+        this.form.reportType = resdata.reportType
+        console.log(imgList)
+        break
+      }
+      const arr = []
+      this.srcList = []
+      imgList.map(it => {
+        arr.push({ url: this.baseApi + '/file' + it, response: it })
+        this.srcList.push(this.baseApi + '/file' + it)
+      })
+      this.fileList = arr
+    },
+    [CRUD.HOOK.afterSubmit]() {
+      this.clearImage()
+    },
+    clearImage() {
+      imageArr = []
+      this.fileList = []
+    },
+    handleAvatarSuccess(res, file) {
+      imageArr.push(res)
+      var s = imageArr.join()
+      this.form.plantSyBatchPic = s
+
+      if (this.form.reportType == null) {
+        this.form.reportType = '0'
+      }
+      temporary.push({ reportType: this.form.reportType, address: this.form.plantSyBatchPic })
+      console.log(temporary)
+      imageArr = []
+    },
+    handleRemove(file, fileList) {
+      imageArr = []
+      alert(123)
+      fileList.map(it => {
+        imageArr.push(it.response)
+      })
+      this.form.plantSyBatchPic = imageArr.join(',')
+    },
+    beforeAvatarUpload(file) {
+      const isJPG = file.type.indexOf('image') !== -1
+      if (!isJPG) {
+        this.$message.error('请上传图片！')
+      }
+      return isJPG
+    },
+    getData() {
+      select().then(res => {
+        this.productList = res.content
+      })
+      crudPlantSyBatch.getDictionary({ dictName: 'plant_report_type' }).then(res => {
+        this.dictList = res
+      })
+    },
+    handleChange(value) {
+      this.pondList.map(item => {
+        if (item.plantMassifName === value) {
+          this.form.plantMassifId = item.id
+          this.form.plantMassifCode = item.plantMassifCode
+        }
+      })
+    },
+    // 产品change事件
+    productChange(val) {
+      this.productList.map(item => {
+        if (item.id === val) {
+          this.form.productName = item.productName
+          this.form.productCode = item.productCode
+        }
+      })
+      crudPlantSyBatch.getByProductCode({ productCode: this.form.productCode }).then(res => {
+        this.form.batchNo = res
+      })
+
+      select({ id: val }).then(res => {
+        this.typeList = res.content
+      })
+    },
+    // 品种change事件
+    plantBreedChange(val) {
+      this.typeList.map(item => {
+        if (item.plantBreedName === val) {
+          this.form.plantBreedId = item.plantBreedId
+          this.form.plantBreedCode = item.plantBreedCode
+        }
+      })
+      getByPlantBreedId({ plantBreedId: this.form.plantBreedId }).then(res => {
+        this.pondList = res
+      })
+    },
+    // 这里判断当前点击的图片是哪一张，规定每次只能选择一张，并且如果再次点击就取消选择
+    changeList(id) {
+      var sourceYSId = id.substr(-10)
+
+      getselect({ labelAdress: sourceYSId }).then(res => {
+        this.sourceForm.syCodeTypeId = res.content[0].id
+      })
+      if (this.a == id) {
+        this.a = !this.a
+      } else {
+        this.a = id
+      }
+    },
+    handleCommand(command) {
+      if (command.name === 'view') {
+        this.crud.toView(command.value)
+      } else if (command.name === 'edit') {
+        this.crud.toEdit(command.value)
+      } else if (command.name === 'source') {
+        this.createSource()
+      } else if (command.name === 'del') {
+        this.$confirm('确定删除该条记录吗？', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(() => {
+          this.crud.doDelete(command.value)
+        })
+      }
+    },
+    createSource() {
+      var imgList = []
+      this.dialogVisible = true
+
+      this.sourceForm.syBatchId = command.value.id
+      this.sourceForm.batchNo = command.value.batchNo
+      // 插入批次编号
+      // 插入溯源码样式id
+
+      // 根据批次编号查询数量
+      getAmount({ batchId: command.value.id }).then(res => {
+        console.log(res)
+        this.shengxia = res.shengxia
+        this.zongshu = res.amount
+      })
+
+      // 渲染图片
+      getselect().then(res => {
+        for (var i = 0; i < res.content.length; i++) {
+          imgList.push(res.content[i].labelAdress)
+        }
+        for (var i = 0; i < imgList.length; i++) {
+          this.classList.push(this.baseApi + '/file' + imgList[i])
+        }
+      })
+    },
+    // 生成溯源确认按钮
+    sourceSub() {
+      this.sourceForm.isOkNumber = 0
+      this.sourceForm.scanNumber = 0
+      alert(123)
+      add(this.sourceForm).then(res => {
+        console.log(res)
+      })
+      console.log(this.sourceForm)
+      this.dialogVisible = false
+      this.classList = []
+      this.sourceForm = []
+    },
+    // 生成溯源取消按钮
+    sourceBtn() {
+      this.dialogVisible = false
+      this.classList = []
+      this.sourceForm = []
+    },
+    handleChoose(value) {
+      this.chooseType = value
+    },
+    handleClose() {
+      this.sourceForm = []
+      this.dialogVisible = false
+      this.classList = []
+      this.clearImage()
+      this.crud.cancelCU()
+    },
+    agreeChange(val) {
+      var imgList = []
+      crudPlantSyBatch.getByTypeAndId({ plantSyBatchId: this.form.id, reportType: val }).then(res => {
+        console.log(res)
+        for (var i = 0; i < res.content.length; i++) {
+          // this.form.reportType = res.content[i].reportType
+          // imgList.push(res.content[i].address)
+          if (res.content[i].reportType == val) {
+            this.form.reportType = res.content[i].reportType
+            imgList.push({ url: this.baseApi + '/file' + res.content[i].address, response: res.content[i].address })
+          }
+          console.log(imgList)
+        }
+        this.fileList = imgList
+      })
+      alert(val)
+      // 点击已有类别， 隐藏清空自定义类别
+      this.form.reportType = '' // 清空类别下标
+      this.visibleCancel = 'none' // 输入框隐藏
+      this.form.reportType = val
+    },
+    custom() {
+      if (this.visibleCancel == '') {
+        this.visibleCancel = 'none' // 输入框隐藏
+      } else {
+        this.visibleCancel = ''
+      }
+      // 点击自定义类别， 清空已有类别
+      this.form.reportType = ''
+      this.form.radio1 = ''
+    },
+    // 添加自定义类别字典项
+    subDict() {
+      alert(this.form.dictLabel)
+      if (this.form.dictLabel != null) {
+        crudPlantSyBatch.dictIdAdd({ dictLabel: this.form.dictLabel, dictName: 'plant_report_type' }).then(res => {
+          this.$notify({
+            title: '新增成功',
+            type: 'success'
+          })
+          crudPlantSyBatch.getDictionary({ dictName: 'plant_report_type' }).then(res => {
+            this.dictList = res
+          })
+        })
+      } else {
+        alert(123)
+      }
+    },
+    // 添加batchform表单
+    batchSub() {
+      var res = this.form
+      var resource = { res }
+      console.log(temporary)
+      crudPlantSyBatch.add({ resource: this.form, data: temporary }).then(res => {
+        this.$notify({
+          title: '新增成功',
+          type: 'success'
+        })
+
+        this.handleClose()
+        this.clearImage()
+      })
+    }
+  }
+}
+</script>
+<style >
+.circle {
+  position: relative;
+  width: 632px;
+  left: 15px;
+}
+.circle-ul {
+  display: flex;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  width: 532px;
+  padding: 0;
+  margin: 14px 0 0 50px;
+}
+.circle-li {
+  margin-right: 20px;
+  list-style: none;
+  margin-bottom: 20px;
+}
+.topic-shade {
+  display: none;
+}
+.changeBorder {
+  width: 114px;
+  height: 114px;
+  position: relative;
+  cursor: pointer;
+  border: 2px solid rgb(0, 204, 185);
+  margin: -1px -8px 0 -8px;
+}
+.topic-shade {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  position: absolute;
+  top: 123.5px;
+  right: 0;
+  bottom: 0;
+  left: 86px;
+}
+.shade {
+  margin-bottom: 4px;
+}
+
+.el-radio-button__inner {
+  border: 1px solid rgb(179, 216, 255);
+  margin-right: 10px;
+  border-radius: 5px;
+}
+
+.el-radio-button:first-child .el-radio-button__inner {
+  border-radius: 5px;
+}
+
+.el-radio-button:last-child .el-radio-button__inner {
+  border-radius: 5px;
+}
+</style>
+

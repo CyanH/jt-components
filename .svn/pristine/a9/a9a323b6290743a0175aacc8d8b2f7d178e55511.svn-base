@@ -1,0 +1,227 @@
+<template>
+  <div :class="className" :style="{height:height,width:width}" />
+</template>
+
+<script>
+import echarts from 'echarts'
+require('echarts/theme/macarons') // echarts theme
+import resize from './mixins/resize'
+
+export default {
+  mixins: [resize],
+  props: {
+    className: {
+      type: String,
+      default: 'chart'
+    },
+    width: {
+      type: String,
+      default: '100%'
+    },
+    height: {
+      type: String,
+      default: '350px'
+    },
+    autoResize: {
+      type: Boolean,
+      default: true
+    }
+  },
+  data() {
+    return {
+      chart: null,
+    }
+  },
+  mounted() {
+    this.$nextTick(() => {
+      this.initChart()
+    })
+  },
+  beforeDestroy() {
+    if (!this.chart) {
+      return
+    }
+    this.chart.dispose()
+    this.chart = null
+  },
+  methods: {
+    initChart() {
+      this.chart = echarts.init(this.$el, 'macarons')
+    },
+    setOptions({ water, oxygen,ph,date } = {}) {
+      this.chart.setOption({
+        
+        xAxis: {
+          // data: date,
+          // boundaryGap: false,
+          // axisTick: {
+          //   show: false
+          // }
+          type: 'category',
+          axisLine: {
+            lineStyle: {
+              color: '#ECF0F4',
+              type: 'dashed'
+            }
+          },
+          axisTick: {
+            show: false
+          },
+          axisLabel: {
+            color: '#8A8A8A',
+          },
+          boundaryGap: false,
+          data: date
+        },
+        grid: {
+          left: 10,
+          right: 10,
+          bottom: 20,
+          top: 30,
+          containLabel: true
+        },
+        tooltip: {
+          trigger: 'axis',
+          // axisPointer: {
+          //   type: 'cross'
+          // },
+          // padding: [5, 10]
+        },
+        yAxis: {
+          // axisTick: {
+          //   show: false
+          // }
+          type: 'value',
+          axisLine: {
+            show: false
+          },
+          axisTick: {
+            show: false
+          },
+          axisLabel: {
+            color: '#8A8A8A'
+          },
+          splitLine: {
+            lineStyle: {
+              type: 'dashed'// 虚线
+            }
+          }
+        },
+        legend: {
+          data: ['水温', '溶氧','PH'],
+          selectedMode: 'single'
+        },
+        series: [
+        //   {
+        //   name: '水温', itemStyle: {
+        //     normal: {
+        //       color: 'rgb(111, 137, 246)',
+        //       lineStyle: {
+        //         color: 'rgb(111, 137, 246)',
+        //         width: 2
+        //       }
+        //     }
+        //   },
+        //   smooth: true,
+        //   type: 'line',
+        //   data: water,
+        //   animationDuration: 2800,
+        //   animationEasing: 'cubicInOut'
+        // },
+        {
+            name: '水温',
+            type: 'line',
+            smooth: true,
+            color: 'rgb(111, 137, 246)',
+            areaStyle: {
+              color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                {
+                  offset: 0,
+                  color: 'rgb(111, 137, 246)'
+                },
+                {
+                  offset: 1,
+                  color: 'rgb(255, 255, 255)'
+                }
+              ])
+            },
+            data: water
+          },
+        // {
+        //   name: '溶氧',
+        //   smooth: true,
+        //   type: 'line',
+        //   itemStyle: {
+        //     normal: {
+        //       color: 'rgb(71, 212, 146)',
+        //       lineStyle: {
+        //         color: 'rgb(71, 212, 146)',
+        //         width: 2
+        //       }
+        //     }
+        //   },
+          
+        //   data: oxygen,
+        //   animationDuration: 2800,
+        //   animationEasing: 'quadraticOut'
+        // },
+        {
+            name: '溶氧',
+            type: 'line',
+            smooth: true,
+            color: 'rgb(71, 212, 146)',
+            areaStyle: {
+              color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                {
+                  offset: 0,
+                  color: 'rgb(71, 212, 146)'
+                },
+                {
+                  offset: 1,
+                  color: 'rgb(255, 255, 255)'
+                }
+              ])
+            },
+            data: oxygen
+          },
+        // {
+        //   name: 'PH', itemStyle: {
+        //     normal: {
+        //       color: 'rgb(127, 87, 245)',
+        //       lineStyle: {
+        //         color: 'rgb(127, 87, 245)',
+        //         width: 2
+        //       }
+        //     }
+        //   },
+        //   smooth: true,
+        //   type: 'line',
+        //   data: ph,
+        //   animationDuration: 2800,
+        //   animationEasing: 'cubicInOut'
+        // },
+        {
+            name: 'PH',
+            type: 'line',
+            smooth: true,
+            color: 'rgb(127, 87, 245)',
+            areaStyle: {
+              color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                {
+                  offset: 0,
+                  color: 'rgb(127, 87, 245)'
+                },
+                {
+                  offset: 1,
+                  color: 'rgb(255, 255, 255)'
+                }
+              ])
+            },
+            data: ph
+          },
+        ]
+      })
+    }
+  }
+}
+</script>

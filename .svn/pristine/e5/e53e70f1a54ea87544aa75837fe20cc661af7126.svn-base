@@ -1,0 +1,61 @@
+<template>
+  <el-table v-loading="crud.loading" :max-height="maxHeight" :data="crud.data" @selection-change="crud.selectionChangeHandler" stripe>
+    <el-table-column type="selection" width="55" />
+    <el-table-column prop="no" label="编号" width="250px" />
+    <el-table-column prop="plantMassifName" label="种植地块" />
+    <el-table-column prop="plantBreedName" label="品种名称" />
+    <el-table-column prop="pickPersonName" label="采收人" />
+    <el-table-column prop="updateTimeStr" label="操作时间：" sortable />
+    <el-table-column v-if="checkPer(['admin','plantPickRecords:edit','plantPickRecords:del'])" label="操作" width="220px" align="center">
+      <template slot-scope="scope">
+        <udOperation :data="scope.row" :has-view="true" :permission="permission" />
+      </template>
+    </el-table-column>
+  </el-table>
+</template>
+
+<script>
+import udOperation from '@crud/UD.operation'
+
+import crudPlantManagement from '@/api/wisdom/plantManagement'
+export default {
+  props: {
+    crud: Object,
+    maxHeight: Number
+  },
+  components: { udOperation },
+  data() {
+    return {
+      permission: {
+        add: ['admin', 'plantPickRecords:add'],
+        edit: ['admin', 'plantPickRecords:edit'],
+        del: ['admin', 'plantPickRecords:del']
+      },
+    }
+  },
+  methods: {
+    handleCommand(command) {
+      if (command.name === 'view') {
+        this.crud.toView(command.value)
+      } else if (command.name === 'edit') {
+        this.crud.toEdit(command.value)
+      } else if (command.name === 'data') {
+        crudPlantManagement.getByIdFinishTime({ id: command.value.id }).then(() => {
+          this.$notify({
+            title: '结束成功',
+            type: 'success'
+          })
+        })
+      } else if (command.name === 'del') {
+        this.$confirm('确定删除该条记录吗？', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(() => {
+          this.crud.doDelete(command.value)
+        })
+      }
+    }
+  }
+}
+</script>

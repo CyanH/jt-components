@@ -1,0 +1,32 @@
+<!--分页-->
+<template>
+  <el-pagination
+    background
+    :page-size.sync="page.size"
+    :total="page.total"
+    :current-page.sync="page.page"
+    :page-sizes="[10, 20, 30, 50]"
+    layout="total, sizes, prev, pager, next, jumper"
+    @size-change="crud.sizeChangeHandler($event)"
+    @current-change="crud.pageChangeHandler"
+  />
+</template>
+<script>
+import { pagination } from "@crud/crud";
+export default {
+  mixins: [pagination()],
+};
+</script>
+
+<style lang="scss" scoped>
+.el-pagination {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+
+  :deep(.el-pagination__sizes){
+    height: auto;
+  }
+}
+</style>

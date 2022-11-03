@@ -1,0 +1,21 @@
+import util from '@/libs/util.js'
+
+export default {
+  methods: {
+    handleMenuSelect(index) {
+      if (/^https:\/\/|http:\/\//.test(index)) {
+        util.open(index)
+      } else {
+        if (index === 'generator') {
+          this.$router.push({
+            path: '/sys-tools/generator'
+          })
+        } else {
+          this.$router.push({
+            path: index
+          })
+        }
+      }
+    }
+  }
+}

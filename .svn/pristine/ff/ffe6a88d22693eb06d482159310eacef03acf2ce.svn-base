@@ -1,0 +1,35 @@
+<template>
+  <el-dropdown size="small" class="mr">
+    <span class="btn-text">{{ user.nickName ? `你好 ${user.nickName}` : '未登录' }}</span>
+    <el-dropdown-menu slot="dropdown">
+      <router-link to="/user/center">
+        <el-dropdown-item>
+          <i class="fa fa-user" />
+          个人中心
+        </el-dropdown-item>
+      </router-link>
+
+      <el-dropdown-item @click.native="logOff">
+        <icon name="power-off" class="mr-5" />
+        注销
+      </el-dropdown-item>
+    </el-dropdown-menu>
+  </el-dropdown>
+</template>
+
+<script>
+import { mapGetters } from 'vuex'
+export default {
+  computed: {
+    ...mapGetters(['user'])
+  },
+  methods: {
+    /**
+     * @description 登出
+     */
+    logOff() {
+      this.$store.dispatch('user/LogOut').then(() => { location.reload() })
+    }
+  }
+}
+</script>
